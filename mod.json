@@ -5,7 +5,7 @@
     },
     "id": "icontradict.gd-requests",
     "name": "GD Requests",
-    "version": "2.2.0",
+    "version": "2.3.0",
     "developer": "iContradict",
     "description": "Manage your viewer level request queue in-game. Browse requests, jump to levels, remove/ban/mark as played -- all without leaving GD. Pairs with gdrequests.org.",
     "repository": "https://github.com/xCompassionate/gd-requests-mod",
@@ -36,11 +36,11 @@
             "description": "Show a notification when you enter a level from your queue, displaying who requested it.",
             "default": true
         },
-        "f2-hotkey": {
-            "type": "bool",
-            "name": "F2 Hotkey",
-            "description": "Press F2 anywhere in GD to open your request queue.",
-            "default": true
+        "open-queue-keybind": {
+            "type": "keybind",
+            "name": "Open Queue Hotkey",
+            "description": "Press this key anywhere in GD to open your request queue.",
+            "default": "F2"
         }
     }
 }

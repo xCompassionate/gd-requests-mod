@@ -1,0 +1,47 @@
+name: Build Geode Mod
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - { name: Windows, os: windows-latest, target: Win64 }
+          - { name: Android32, os: ubuntu-latest, target: Android32 }
+          - { name: Android64, os: ubuntu-latest, target: Android64 }
+
+    name: ${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: geode-sdk/build-geode-mod@main
+        id: build
+        with:
+          target: ${{ matrix.config.target }}
+          combine: true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.config.name }}
+          path: ${{ steps.build.outputs.build-output }}
+
+  combine:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: geode-sdk/build-geode-mod/combine@main
+        id: combine
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Build Output
+          path: ${{ steps.combine.outputs.build-output }}

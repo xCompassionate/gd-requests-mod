@@ -4,8 +4,8 @@
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/PauseLayer.hpp>
-#include <Geode/modify/CCKeyboardDispatcher.hpp>
 #include <Geode/ui/BasedButtonSprite.hpp>
+#include <Geode/loader/SettingV3.hpp>
 #include <unordered_set>
 #include <cmath>
 #include <algorithm>
@@ -14,6 +14,22 @@
 using namespace geode::prelude;
 
 static const std::string SERVER = "https://www.gdrequests.org";
+
+static std::string jsonEscape(const std::string& s) {
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        switch (c) {
+            case '"':  out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\n': out += "\\n";  break;
+            case '\r': out += "\\r";  break;
+            case '\t': out += "\\t";  break;
+            default:   out += c;
+        }
+    }
+    return out;
+}
 
 static std::unordered_set<std::string> g_queueLevelIds;
 static std::unordered_map<std::string, std::string> g_queueLevelNames; // levelId → requester name
@@ -38,7 +54,7 @@ void sendQueueAction(const std::string& endpoint, const std::string& levelId) {
     std::string url  = SERVER + endpoint;
     std::string body = fmt::format(
         "{{\"token\":\"{}\",\"level_id\":\"{}\"}}",
-        token, levelId
+        jsonEscape(token), jsonEscape(levelId)
     );
     geode::async::spawn(
         [url, body]() -> web::WebFuture {
@@ -58,7 +74,7 @@ void sendQueueRemoveYoutube(const std::string& youtubeUrl) {
     std::string url  = SERVER + "/api/queue/remove";
     std::string body = fmt::format(
         "{{\"token\":\"{}\",\"youtube_url\":\"{}\"}}",
-        token, youtubeUrl
+        jsonEscape(token), jsonEscape(youtubeUrl)
     );
     geode::async::spawn(
         [url, body]() -> web::WebFuture {
@@ -76,7 +92,7 @@ void sendQueueRemoveAll() {
     if (token.empty()) return;
 
     std::string url  = SERVER + "/api/queue/remove-all";
-    std::string body = fmt::format("{{\"token\":\"{}\"}}", token);
+    std::string body = fmt::format("{{\"token\":\"{}\"}}", jsonEscape(token));
     geode::async::spawn(
         [url, body]() -> web::WebFuture {
             return web::WebRequest()
@@ -676,18 +692,13 @@ struct $modify(GDReqMenuLayer, MenuLayer) {
     }
 };
 
-// ─── Global keyboard shortcut (F2) to open queue from anywhere ────────────────
-
-struct $modify(GDReqKeyboard, CCKeyboardDispatcher) {
-    bool dispatchKeyboardMSG(enumKeyCodes key, bool down, bool repeat, double timestamp) {
-        if (down && !repeat && key == enumKeyCodes::KEY_F2
-            && Mod::get()->getSettingValue<bool>("f2-hotkey")) {
-            auto token = Mod::get()->getSettingValue<std::string>("creator-token");
-            if (!token.empty()) {
-                fetchAndShowQueue();
-                return true;
-            }
+// Keybind listener for opening the queue
+$on_mod(Loaded) {
+    listenForKeybindSettingPresses("open-queue-keybind", [](Keybind const&, bool down, bool repeat, double) {
+        if (!down || repeat) return;
+        auto token = Mod::get()->getSettingValue<std::string>("creator-token");
+        if (!token.empty()) {
+            fetchAndShowQueue();
         }
-        return CCKeyboardDispatcher::dispatchKeyboardMSG(key, down, repeat, timestamp);
-    }
-};
+    });
+}
