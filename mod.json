@@ -2,7 +2,8 @@
     "geode": "5.3.0",
     "gd": {
         "win": "2.2081",
-        "mac": "2.2081"
+        "mac": "2.2081",
+        "ios": "2.2081"
     },
     "id": "icontradict.gd-requests",
     "name": "GD Requests",
