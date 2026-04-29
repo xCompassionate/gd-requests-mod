@@ -234,12 +234,10 @@ protected:
         auto removeAllMenu = CCMenu::create();
         removeAllMenu->setPosition({0.f, 0.f});
 
-        auto removeAllLbl = CCLabelBMFont::create("Remove All", "bigFont.fnt", 200.f);
-        removeAllLbl->setScale(0.28f);
-        removeAllLbl->setColor({255, 70, 70});
+        auto removeAllSpr = CCSprite::createWithSpriteFrameName("edit_delBtnSmall_001.png");
         auto removeAllBtn = CCMenuItemSpriteExtra::create(
-            removeAllLbl, this, menu_selector(QueuePopup::onRemoveAll));
-        removeAllBtn->setPosition({sz.width - 50.f, sz.height - 38.f});
+            removeAllSpr, this, menu_selector(QueuePopup::onRemoveAll));
+        removeAllBtn->setPosition({sz.width - 25.f, sz.height - 30.f});
         removeAllMenu->addChild(removeAllBtn);
         root->addChild(removeAllMenu);
 
@@ -349,67 +347,60 @@ protected:
 
             if (e.levelId.empty()) {
                 // youtube-only entry: remove, timeout, watch
-                auto removeLbl = CCLabelBMFont::create("Remove", "bigFont.fnt", stackW * 3.f);
-                removeLbl->setScale(0.26f);
-                removeLbl->setColor({255, 140, 40});
+                auto removeSpr = CCSprite::createWithSpriteFrameName("edit_delBtnSmall_001.png");
+                removeSpr->setScale(0.85f);
                 auto removeBtn = CCMenuItemSpriteExtra::create(
-                    removeLbl, this, menu_selector(QueuePopup::onRemove));
+                    removeSpr, this, menu_selector(QueuePopup::onRemove));
                 removeBtn->setTag(idx);
-                removeBtn->setPosition({actX + stackW * 0.5f, rowCY + inner * 0.28f});
+                removeBtn->setPosition({actX + stackW * 0.25f, rowCY});
                 menu->addChild(removeBtn);
 
-                auto timeoutLbl = CCLabelBMFont::create("Timeout", "bigFont.fnt", stackW * 3.f);
-                timeoutLbl->setScale(0.26f);
-                timeoutLbl->setColor({255, 200, 50});
+                auto timeoutSpr = CCSprite::createWithSpriteFrameName("GJ_timeIcon_001.png");
+                timeoutSpr->setScale(0.65f);
                 auto timeoutBtn = CCMenuItemSpriteExtra::create(
-                    timeoutLbl, this, menu_selector(QueuePopup::onTimeout));
+                    timeoutSpr, this, menu_selector(QueuePopup::onTimeout));
                 timeoutBtn->setTag(idx);
-                timeoutBtn->setPosition({actX + stackW * 0.5f, rowCY});
+                timeoutBtn->setPosition({actX + stackW * 0.55f, rowCY});
                 menu->addChild(timeoutBtn);
 
-                auto watchLbl = CCLabelBMFont::create("Watch", "bigFont.fnt", stackW * 3.f);
-                watchLbl->setScale(0.26f);
-                watchLbl->setColor({255, 70, 70});
+                auto watchSpr = CCSprite::createWithSpriteFrameName("GJ_youtubeIcon_001.png");
+                watchSpr->setScale(0.55f);
                 auto watchBtn = CCMenuItemSpriteExtra::create(
-                    watchLbl, this, menu_selector(QueuePopup::onWatch));
+                    watchSpr, this, menu_selector(QueuePopup::onWatch));
                 watchBtn->setTag(idx);
-                watchBtn->setPosition({actX + stackW * 0.5f, rowCY - inner * 0.28f});
+                watchBtn->setPosition({actX + stackW * 0.85f, rowCY});
                 menu->addChild(watchBtn);
             } else {
                 // normal level entry: Remove, Timeout, Ban stacked
-                auto removeLbl = CCLabelBMFont::create("Remove", "bigFont.fnt", stackW * 3.f);
-                removeLbl->setScale(0.26f);
-                removeLbl->setColor({255, 140, 40});
+                auto removeSpr = CCSprite::createWithSpriteFrameName("edit_delBtnSmall_001.png");
+                removeSpr->setScale(0.85f);
                 auto removeBtn = CCMenuItemSpriteExtra::create(
-                    removeLbl, this, menu_selector(QueuePopup::onRemove));
+                    removeSpr, this, menu_selector(QueuePopup::onRemove));
                 removeBtn->setTag(idx);
-                removeBtn->setPosition({actX + stackW * 0.5f, rowCY + inner * 0.28f});
+                removeBtn->setPosition({actX + stackW * 0.25f, rowCY});
                 menu->addChild(removeBtn);
 
-                auto timeoutLbl = CCLabelBMFont::create("Timeout", "bigFont.fnt", stackW * 3.f);
-                timeoutLbl->setScale(0.26f);
-                timeoutLbl->setColor({255, 200, 50});
+                auto timeoutSpr = CCSprite::createWithSpriteFrameName("GJ_timeIcon_001.png");
+                timeoutSpr->setScale(0.65f);
                 auto timeoutBtn = CCMenuItemSpriteExtra::create(
-                    timeoutLbl, this, menu_selector(QueuePopup::onTimeout));
+                    timeoutSpr, this, menu_selector(QueuePopup::onTimeout));
                 timeoutBtn->setTag(idx);
-                timeoutBtn->setPosition({actX + stackW * 0.5f, rowCY});
+                timeoutBtn->setPosition({actX + stackW * 0.55f, rowCY});
                 menu->addChild(timeoutBtn);
 
-                auto banLbl = CCLabelBMFont::create("Ban Level", "bigFont.fnt", stackW * 3.f);
-                banLbl->setScale(0.26f);
-                banLbl->setColor({220, 30, 30});
+                auto banSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
+                banSpr->setScale(0.6f);
                 auto banBtn = CCMenuItemSpriteExtra::create(
-                    banLbl, this, menu_selector(QueuePopup::onBlacklist));
+                    banSpr, this, menu_selector(QueuePopup::onBlacklist));
                 banBtn->setTag(idx);
-                banBtn->setPosition({actX + stackW * 0.5f, rowCY - inner * 0.28f});
+                banBtn->setPosition({actX + stackW * 0.85f, rowCY});
                 menu->addChild(banBtn);
 
                 if (hasYT) {
-                    auto ytLbl = CCLabelBMFont::create("YT", "bigFont.fnt", ytW * 3.f);
-                    ytLbl->setScale(0.30f);
-                    ytLbl->setColor({255, 70, 70});
+                    auto ytSpr = CCSprite::createWithSpriteFrameName("GJ_youtubeIcon_001.png");
+                    ytSpr->setScale(0.45f);
                     auto ytBtn = CCMenuItemSpriteExtra::create(
-                        ytLbl, this, menu_selector(QueuePopup::onWatch));
+                        ytSpr, this, menu_selector(QueuePopup::onWatch));
                     ytBtn->setTag(idx);
                     ytBtn->setPosition({actX + stackW + btnGap + ytW * 0.5f, rowCY});
                     menu->addChild(ytBtn);
@@ -434,20 +425,21 @@ protected:
             root->addChild(pageLbl);
 
             if (m_page > 0) {
-                auto prevLbl = CCLabelBMFont::create("< Prev", "bigFont.fnt", 100.f);
-                prevLbl->setScale(0.35f);
+                auto prevSpr = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
+                prevSpr->setFlipX(true);
+                prevSpr->setScale(0.75f);
                 auto prevBtn = CCMenuItemSpriteExtra::create(
-                    prevLbl, this, menu_selector(QueuePopup::onPrevPage));
-                prevBtn->setPosition({sz.width * 0.2f, navY});
+                    prevSpr, this, menu_selector(QueuePopup::onPrevPage));
+                prevBtn->setPosition({sz.width * 0.15f, navY + 12.f});
                 navMenu->addChild(prevBtn);
             }
 
             if (m_page < totalPages - 1) {
-                auto nextLbl = CCLabelBMFont::create("Next >", "bigFont.fnt", 100.f);
-                nextLbl->setScale(0.35f);
+                auto nextSpr = CCSprite::createWithSpriteFrameName("GJ_arrow_03_001.png");
+                nextSpr->setScale(0.75f);
                 auto nextBtn = CCMenuItemSpriteExtra::create(
-                    nextLbl, this, menu_selector(QueuePopup::onNextPage));
-                nextBtn->setPosition({sz.width * 0.8f, navY});
+                    nextSpr, this, menu_selector(QueuePopup::onNextPage));
+                nextBtn->setPosition({sz.width * 0.85f, navY + 12.f});
                 navMenu->addChild(nextBtn);
             }
         }
@@ -529,9 +521,8 @@ protected:
         if (scene) {
             auto ws = CCDirector::get()->getWinSize();
 
-            auto unbanLbl = CCLabelBMFont::create("UNBAN", "bigFont.fnt");
-            unbanLbl->setColor({100, 220, 255});
-            unbanLbl->setScale(0.45f);
+            auto unbanSpr = CCSprite::createWithSpriteFrameName("GJ_undoBtn_001.png");
+            unbanSpr->setScale(0.85f);
 
             struct CancelHelper : public CCObject {
                 std::shared_ptr<bool> cancelled;
@@ -553,7 +544,7 @@ protected:
 
             auto menu = CCMenu::create();
             menu->addChild(CCMenuItemSpriteExtra::create(
-                unbanLbl, helper, menu_selector(CancelHelper::onCancel)
+                unbanSpr, helper, menu_selector(CancelHelper::onCancel)
             ));
             menu->setPosition({ws.width / 2.f + 80.f, 35.f});
             helper->menu = menu;
@@ -884,13 +875,8 @@ struct $modify(GDReqPauseLayer, PauseLayer) {
 
         auto ws = CCDirector::get()->getWinSize();
 
-        auto removeSpr = CCLabelBMFont::create("Remove",    "bigFont.fnt");
-        removeSpr->setColor({255, 140, 40});
-        removeSpr->setScale(0.6f);
-
-        auto banSpr = CCLabelBMFont::create("Ban Level", "bigFont.fnt");
-        banSpr->setColor({220, 30, 30});
-        banSpr->setScale(0.6f);
+        auto removeSpr = CCSprite::createWithSpriteFrameName("edit_delBtnSmall_001.png");
+        auto banSpr    = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
 
         auto removeBtn = CCMenuItemSpriteExtra::create(
             removeSpr, this, menu_selector(GDReqPauseLayer::onRemoveFromQueue));
@@ -900,7 +886,7 @@ struct $modify(GDReqPauseLayer, PauseLayer) {
         float btnY  = ws.height * 0.07f;
         float rW    = removeSpr->getContentSize().width * removeSpr->getScale();
         float bW    = banSpr->getContentSize().width    * banSpr->getScale();
-        float gap   = 12.f;
+        float gap   = 25.f;
         float midX  = ws.width / 2.f;
         float totalW = rW + gap + bW;
         float startX = midX - totalW / 2.f;
@@ -941,9 +927,8 @@ struct $modify(GDReqPauseLayer, PauseLayer) {
         if (scene) {
             auto ws = CCDirector::get()->getWinSize();
 
-            auto unbanLbl = CCLabelBMFont::create("UNBAN", "bigFont.fnt");
-            unbanLbl->setColor({100, 220, 255});
-            unbanLbl->setScale(0.45f);
+            auto unbanSpr = CCSprite::createWithSpriteFrameName("GJ_undoBtn_001.png");
+            unbanSpr->setScale(0.85f);
 
             struct CancelHelper : public CCObject {
                 std::shared_ptr<bool> cancelled;
@@ -965,7 +950,7 @@ struct $modify(GDReqPauseLayer, PauseLayer) {
 
             auto menu = CCMenu::create();
             menu->addChild(CCMenuItemSpriteExtra::create(
-                unbanLbl, helper, menu_selector(CancelHelper::onCancel)
+                unbanSpr, helper, menu_selector(CancelHelper::onCancel)
             ));
             menu->setPosition({ws.width / 2.f + 80.f, 35.f});
             helper->menu = menu;
