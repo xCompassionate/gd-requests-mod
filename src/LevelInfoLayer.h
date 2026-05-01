@@ -12,7 +12,7 @@
 #include <alphalaneous.pages_api/include/PageMenu.h>
 #endif
 
-matjson::Value getFromArray(int id);
+QueueEntry* getFromQueue(int id);
 
 bool isLoquiDownload = false;
 
@@ -92,12 +92,12 @@ class $modify(LoquiLevelInfoLayer, LevelInfoLayer) {
         m_fields->m_isLevelRequest = true;
         GlobalVars::getSharedInstance()->isLoquiMenu = true;
 
-        matjson::Value listLevel = getFromArray(level->m_levelID);
+        QueueEntry* entry = getFromQueue(level->m_levelID);
 
         std::string requester;
 
-        if(listLevel != nullptr){
-            requester = listLevel["requester"].asString().unwrapOr("");
+        if(entry != nullptr){
+            requester = entry->name;
         }
         else {
             requester = GlobalVars::getSharedInstance()->requester;
@@ -445,13 +445,13 @@ class $modify(LoquiLevelInfoLayer, LevelInfoLayer) {
     }
 };
 
-matjson::Value getFromArray(int id){
+QueueEntry* getFromQueue(int id){
 
-    std::vector<matjson::Value> levels = GlobalVars::getSharedInstance()->currentLevelList;
+    auto& list = GlobalVars::getSharedInstance()->currentLevelList;
+    std::string idStr = std::to_string(id);
 
-    for(int i = 0; i < levels.size(); i++){
-        matjson::Value level = levels[i];
-        if(level["id"] == id) return level;
+    for(auto& entry : list){
+        if(entry.levelId == idStr) return &entry;
     }
 
     return nullptr;

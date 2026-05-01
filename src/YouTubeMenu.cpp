@@ -1,8 +1,9 @@
 #include "YouTubeMenu.h"
 #include "Loquibot.h"
 #include <Geode/utils/web.hpp>
+#include <Geode/utils/async.hpp>
 
-static std::unordered_map<std::string, web::WebTask> RUNNING_REQUESTS {};
+using namespace geode::prelude;
 
 void YouTubeMenu::setup() {
 
@@ -79,16 +80,18 @@ YouTubeMenu* YouTubeMenu::create(std::string thumbnailURL, std::string videoTitl
 void YouTubeMenu::downloadImage(){
 
     YouTubeMenu* self = this;
+    std::string url = m_thumbnailURL;
 
-    auto req = web::WebRequest();
-
-    RUNNING_REQUESTS.emplace("@thumbnailCheck", req.get(m_thumbnailURL.c_str())
-        .map([self](web::WebResponse* response){
-            if(response->ok()) {
+    geode::async::spawn(
+        [url]() -> web::WebFuture {
+            return web::WebRequest().get(url);
+        },
+        [self](web::WebResponse response) {
+            if(response.ok()) {
                 auto winSize = CCDirector::sharedDirector()->getWinSize();
 
                 CCImage* img = new CCImage();
-                img->initWithImageData((void*)response->data().data(), response->data().size());
+                img->initWithImageData((void*)response.data().data(), response.data().size());
                 img->autorelease();
 
                 CCTexture2D* imgTexture = new CCTexture2D();
@@ -107,11 +110,8 @@ void YouTubeMenu::downloadImage(){
                 self->m_mainLayer->addChild(pSprite);
                 self->m_mainLayer->addChild(border);
             }
-
-            RUNNING_REQUESTS.erase("@thumbnailCheck");
-            return *response;
         }
-    ));
+    );
     
 }
 void YouTubeMenu::openURL(CCObject* obj){
