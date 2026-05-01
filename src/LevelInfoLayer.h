@@ -13,33 +13,6 @@
 
 QueueEntry* getFromQueue(int id);
 
-bool isLoquiDownload = false;
-
-class $modify(FLAlertLayer) {
-
-    struct Fields {
-        bool m_showable = true;
-    };
-
-    bool init(FLAlertLayerProtocol* p0, char const* p1, gd::string p2, char const* p3, char const* p4, float p5, bool p6, float p7, float p8) {
-        
-        if (isLoquiDownload) {
-            m_fields->m_showable = false;
-
-            geode::createQuickPopup(p1, p2, p3, p4, nullptr, true);
-
-            return true;
-        }
-        return FLAlertLayer::init(p0, p1, p2, p3, p4, p5, p6, p7, p8);
-    }
-
-    void show(){
-        if(m_fields->m_showable) {
-            FLAlertLayer::show();
-        }
-    }
-};
-
 class $modify(LoquiLevelInfoLayer, LevelInfoLayer) {
 
     struct Fields {
@@ -47,32 +20,7 @@ class $modify(LoquiLevelInfoLayer, LevelInfoLayer) {
         std::string m_message = "";
     };
 
-    void levelDownloadFinished(GJGameLevel* p0){
-        if(m_fields->m_isLevelRequest){
-            isLoquiDownload = true;
-        }
-
-        LevelInfoLayer::levelDownloadFinished(p0);
-
-        isLoquiDownload = false;
-    }
-
-    void levelDownloadFailed(int p0){
-        
-        if(m_fields->m_isLevelRequest){
-            isLoquiDownload = true;
-        }
-
-        LevelInfoLayer::levelDownloadFailed(p0);
-
-        isLoquiDownload = false;
-    }
-
     bool init(GJGameLevel* level, bool a2) {
-
-        if (level->m_levelID == GlobalVars::getSharedInstance()->currentID){
-            isLoquiDownload = true;
-        }
 
         if (!LevelInfoLayer::init(level, a2)) return false;
 
@@ -81,8 +29,6 @@ class $modify(LoquiLevelInfoLayer, LevelInfoLayer) {
             return true;
         }
         m_fields->m_message = static_cast<LoquiGJGameLevel*>(level)->m_fields->m_message;
-
-        isLoquiDownload = false;
 
         auto winSize = CCDirector::sharedDirector()->getWinSize();
 
@@ -159,14 +105,6 @@ class $modify(LoquiLevelInfoLayer, LevelInfoLayer) {
         topButton->setID("top-button"_spr);
         topButton->setPosition({ buttonXPos, winSize.height / 2 + 110 });
 
-        auto randomButtonSprite = CCSprite::create("LB_randomBtn.png"_spr);
-        randomButtonSprite->setFlipX(true);
-        randomButtonSprite->setScale(0.9);
-        auto randomButton = CCMenuItemSpriteExtra::create(randomButtonSprite, this,
-            menu_selector(Loquibot::goToRandomLevel));
-        randomButton->setID("random-button"_spr);
-        randomButton->setPosition({ buttonXPos, winSize.height / 2 - 20 });
-
         auto undoButtonSprite = CCSprite::createWithSpriteFrameName("GJ_undoBtn_001.png");
         undoButtonSprite->setScale(0.9f);
         auto undoButton = CCMenuItemSpriteExtra::create(undoButtonSprite, this,
@@ -242,7 +180,6 @@ class $modify(LoquiLevelInfoLayer, LevelInfoLayer) {
         menu->setLayout(columnLayout);
 
         menu->addChild(nextButton);
-        menu->addChild(randomButton);
         menu->addChild(topButton);
         menu->addChild(blockButton);
         menu->setPosition({winSize.width - 74, winSize.height/2 + 30});
