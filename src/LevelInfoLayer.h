@@ -8,9 +8,8 @@
 #include "GDRequestsAPI.h"
 #include "GJGameLevel.h"
 
-#ifdef GEODE_IS_WINDOWS
-#include <alphalaneous.pages_api/include/PageMenu.h>
-#endif
+#include "PageMenu.h"
+#include "PagesAPI.h"
 
 QueueEntry* getFromQueue(int id);
 
@@ -251,9 +250,7 @@ class $modify(LoquiLevelInfoLayer, LevelInfoLayer) {
 
         this->addChild(menu);
 
-#ifdef GEODE_IS_WINDOWS
         static_cast<PageMenu*>(menu)->setPaged(2, PageOrientation::VERTICAL, 110);
-#endif
 
         CCMenu* rightSideMenu = typeinfo_cast<CCMenu*>(this->getChildByID("right-side-menu"));
 

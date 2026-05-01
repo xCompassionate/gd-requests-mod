@@ -2,7 +2,8 @@
 #include "Loquibot.h"
 #include "GlobalVars.h"
 
-#include <alphalaneous.pages_api/include/PageMenu.h>
+#include "PageMenu.h"
+#include "PagesAPI.h"
 
 #include <Geode/modify/LevelSearchLayer.hpp>
 
