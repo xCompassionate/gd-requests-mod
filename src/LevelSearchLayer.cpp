@@ -1,9 +1,8 @@
 #include <Geode/Geode.hpp>
 #include "Loquibot.h"
 #include "GlobalVars.h"
-#include <alphalaneous.pages_api/include/PageMenu.h>
 
-#ifdef GEODE_IS_WINDOWS
+#include <alphalaneous.pages_api/include/PageMenu.h>
 
 #include <Geode/modify/LevelSearchLayer.hpp>
 
@@ -64,5 +63,3 @@ class $modify(LevelSearchLayer) {
         return true;
     }
 };
-
-#endif

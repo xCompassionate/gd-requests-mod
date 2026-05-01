@@ -54,13 +54,13 @@ bool BrownAlertDelegate::init(float w, float h, const char* spr, const char* tit
     return true;
 }
 
-void BrownAlertDelegate::keyDown(cocos2d::enumKeyCodes key) {
+void BrownAlertDelegate::keyDown(cocos2d::enumKeyCodes key, double timestamp) {
     if (key == cocos2d::enumKeyCodes::KEY_Escape)
         return onClose(nullptr);
     if (key == cocos2d::enumKeyCodes::KEY_Space)
         return;
     
-    return FLAlertLayer::keyDown(key);
+    return FLAlertLayer::keyDown(key, timestamp);
 }
 
 void BrownAlertDelegate::onClose(cocos2d::CCObject* pSender) {

@@ -23,7 +23,8 @@
     },
     "tags": ["interface", "online", "utility"],
     "dependencies": {
-        "geode.node-ids": ">=1.15.0"
+        "geode.node-ids": ">=1.15.0",
+        "alphalaneous.pages_api": ">=1.0.0"
     },
     "settings": {
         "creator-token": {
