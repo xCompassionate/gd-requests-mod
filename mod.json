@@ -6,14 +6,14 @@
         "ios": "2.2081",
         "android": "2.2081"
     },
-    "id": "MalikHw47.gd-requests",
+    "id": "malikhw47.gd-requests",
     "name": "GD Requests",
     "version": "3.0.0",
     "developers": ["MalikHw47"],
     "description": "Manage your viewer level request queue in-game. Browse requests, jump to levels, remove/ban/mark as played -- all without leaving GD. Pairs with gdrequests.org.",
     "resources": {
         "sprites": [
-            "resources/black-toggle.png"
+            "resources/*.png"
         ]
     },
     "repository": "https://github.com/xCompassionate/gd-requests-mod",
