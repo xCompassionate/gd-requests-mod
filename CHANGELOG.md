@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.5.3
+- added an option to copy youtube link to clipboard instead of opening with browser (cuz im a Wine user lol)
+- Difficulty Faces!
+
 ## v2.5.2
 - (DEV ONLY) now uses `matjson` instead of manual parsing
 - ui bug fix
