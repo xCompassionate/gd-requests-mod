@@ -30,4 +30,4 @@ Browse and manage your level request queue without ever leaving Geometry Dash.
 - Download: [malikhw47.gd_requests_mod.geode](https://malikhw.github.io/gd-requests-mod/malikhw47.gd_requests_mod.geode)
 - Made by [iContradict](https://twitch.tv/iContradict)
 
-(some features from help by [MalikHw47](https://youtube.com/@MalikHw47))
+(AND NOW OWNED BY [MalikHw47](https://youtube.com/@MalikHw47) MUHAHAHAHAHA)
