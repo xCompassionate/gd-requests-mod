@@ -284,32 +284,42 @@ protected:
             numLbl->setScale(0.38f);
             numLbl->setPosition({14.f, inner / 2.f});
 
-            // top line: level name (or ID fallback) with difficulty color
+            // top line: level name (always white) + difficulty face sprite
             std::string topText;
-            ccColor3B topColor;
             if (e.levelId.empty()) {
                 topText = "YouTube request";
-                topColor = {255, 70, 70};
             } else if (!e.levelName.empty()) {
                 topText = e.levelName;
-                // color by difficulty
-                if (e.gdDifficulty == "easy") topColor = {80, 210, 80};
-                else if (e.gdDifficulty == "normal") topColor = {80, 180, 255};
-                else if (e.gdDifficulty == "hard") topColor = {255, 160, 50};
-                else if (e.gdDifficulty == "harder") topColor = {255, 100, 100};
-                else if (e.gdDifficulty == "insane") topColor = {255, 60, 180};
-                else if (e.gdDifficulty.find("demon") != std::string::npos) topColor = {255, 40, 40};
-                else if (e.gdDifficulty == "auto") topColor = {200, 200, 100};
-                else topColor = {240, 200, 80};
             } else {
                 topText = "ID: " + e.levelId;
-                topColor = {240, 200, 80};
             }
-            auto topLbl = CCLabelBMFont::create(topText.c_str(), "bigFont.fnt", 200.f);
+            auto topLbl = CCLabelBMFont::create(topText.c_str(), "bigFont.fnt", 190.f);
             topLbl->setScale(0.40f);
-            topLbl->setColor(topColor);
+            topLbl->setColor({255, 255, 255});
             topLbl->setAnchorPoint({0.f, 0.5f});
-            topLbl->setPosition({28.f, inner / 2.f + 8.f});
+            // leave room for difficulty icon on the left (icon is ~16px wide after scale)
+            const float diffIconW = 16.f;
+            const float diffIconX = 28.f;
+            topLbl->setPosition({diffIconX + diffIconW + 3.f, inner / 2.f + 8.f});
+
+            // pick the correct difficulty_XX_btn frame
+            std::string diffFrame;
+            if (!e.levelId.empty()) {
+                const auto& d = e.gdDifficulty;
+                if (d == "auto")                         diffFrame = "difficulty_auto_btn2_001.png";
+                else if (d == "easy")                    diffFrame = "difficulty_01_btn_001.png";
+                else if (d == "normal")                  diffFrame = "difficulty_02_btn_001.png";
+                else if (d == "hard")                    diffFrame = "difficulty_03_btn_001.png";
+                else if (d == "harder")                  diffFrame = "difficulty_04_btn_001.png";
+                else if (d == "insane")                  diffFrame = "difficulty_05_btn_001.png";
+                else if (d == "easy_demon")              diffFrame = "difficulty_06_btn_001.png";
+                else if (d == "medium_demon")            diffFrame = "difficulty_07_btn_001.png";
+                else if (d == "hard_demon")              diffFrame = "difficulty_08_btn_001.png";
+                else if (d == "insane_demon")            diffFrame = "difficulty_09_btn_001.png";
+                else if (d == "extreme_demon" ||
+                         d.find("demon") != std::string::npos) diffFrame = "difficulty_10_btn2_001.png";
+                else                                     diffFrame = "difficulty_00_btn_001.png"; // NA
+            }
 
             // bottom line: requester name + source tag + difficulty
             std::string bottomText = e.name + sourceTag(e.source);
@@ -335,6 +345,20 @@ protected:
             rowNode->addChild(numLbl);
             rowNode->addChild(topLbl);
             rowNode->addChild(bottomLbl);
+
+            // add difficulty face icon now that rowNode exists
+            if (!diffFrame.empty()) {
+                auto diffSpr = CCSprite::createWithSpriteFrameName(diffFrame.c_str());
+                if (!diffSpr) diffSpr = CCSprite::createWithSpriteFrameName("difficulty_00_btn_001.png");
+                if (diffSpr) {
+                    float sprH = diffSpr->getContentSize().height;
+                    float sprScale = (sprH > 0.f) ? (diffIconW / sprH) : 1.f;
+                    diffSpr->setScale(sprScale);
+                    diffSpr->setAnchorPoint({0.5f, 0.5f});
+                    diffSpr->setPosition({diffIconX + diffIconW * 0.5f, inner / 2.f + 8.f});
+                    rowNode->addChild(diffSpr);
+                }
+            }
 
             auto mainBtn = CCMenuItemSpriteExtra::create(
                 rowNode, this, menu_selector(QueuePopup::onEntry)
@@ -405,11 +429,20 @@ protected:
                 menu->addChild(banBtn);
 
                 if (hasYT) {
-                    auto ytLbl = CCLabelBMFont::create("YT", "bigFont.fnt", ytW * 3.f);
-                    ytLbl->setScale(0.30f);
-                    ytLbl->setColor({255, 70, 70});
+                    auto ytSpr = CCSprite::createWithSpriteFrameName("gj_ytIcon_001.png");
+                    if (!ytSpr) {
+                        // fallback: plain label if frame missing
+                        auto lbl = CCLabelBMFont::create("YT", "bigFont.fnt", ytW * 3.f);
+                        lbl->setScale(0.30f);
+                        lbl->setColor({255, 70, 70});
+                        ytSpr = CCSprite::create();
+                        ytSpr->addChild(lbl);
+                    } else {
+                        // scale so the icon fits neatly in ytW pixels
+                        ytSpr->setScale(ytW / ytSpr->getContentSize().width);
+                    }
                     auto ytBtn = CCMenuItemSpriteExtra::create(
-                        ytLbl, this, menu_selector(QueuePopup::onWatch));
+                        ytSpr, this, menu_selector(QueuePopup::onWatch));
                     ytBtn->setTag(idx);
                     ytBtn->setPosition({actX + stackW + btnGap + ytW * 0.5f, rowCY});
                     menu->addChild(ytBtn);
@@ -616,7 +649,7 @@ protected:
         );
     }
 
-    // open a youtube link in browser
+    // open or copy a youtube link depending on the "youtube-action" setting
     void onWatch(CCObject* sender) {
         int idx = static_cast<CCNode*>(sender)->getTag();
         if (idx < 0 || idx >= (int)m_entries.size()) return;
@@ -624,7 +657,15 @@ protected:
         if (e.youtubeUrl.empty()) return;
         std::string url = e.youtubeUrl;
         if (url.rfind("http", 0) != 0) url = "https://" + url;
-        CCApplication::sharedApplication()->openURL(url.c_str());
+
+        auto action = Mod::get()->getSettingValue<std::string>("youtube-action");
+        if (action == "Copy Link") {
+            PlatformToolbox::copyToClipboard(url);
+            Notification::create("Link copied to clipboard!", NotificationIcon::Success, 2.f)->show();
+        } else {
+            // "Open Browser" (default)
+            CCApplication::sharedApplication()->openURL(url.c_str());
+        }
     }
 
     ~QueuePopup() {
@@ -759,9 +800,101 @@ void fetchAndShowQueue() {
                             }
                         }
                     }
-                    popup->populate(std::move(entries));
-                    popup->release();
-                }
+                    // Fetch GD level names/difficulties for any entries missing them
+                    // Collect IDs that need names
+                    std::string missingIds;
+                    for (auto& e : entries) {
+                        if (!e.levelId.empty() && e.levelName.empty()) {
+                            if (!missingIds.empty()) missingIds += ",";
+                            missingIds += e.levelId;
+                        }
+                    }
+                    if (missingIds.empty()) {
+                        popup->populate(std::move(entries));
+                        popup->release();
+                        return;
+                    }
+                    // Use GD's search endpoint to batch-fetch level info
+                    std::string gdUrl = "https://www.boomlings.com/database/getGJLevels21.php";
+                    std::string gdBody = "secret=Wmfd2893gb7&type=10&str=" + missingIds + "&gameVersion=22&binaryVersion=45";
+                    geode::async::spawn(
+                        [gdUrl, gdBody]() -> web::WebFuture {
+                            return web::WebRequest()
+                                .header("Content-Type", "application/x-www-form-urlencoded")
+                                .body(std::vector<uint8_t>(gdBody.begin(), gdBody.end()))
+                                .post(gdUrl);
+                        },
+                        [entries = std::move(entries), popup](web::WebResponse gdRes) mutable {
+                            if (gdRes.ok()) {
+                                // Response format: levels#creators#songs#pageinfo
+                                auto body = gdRes.string().unwrapOr("");
+                                // Parse level entries from the first segment
+                                auto segments = [&](const std::string& s, char sep) {
+                                    std::vector<std::string> v;
+                                    std::string cur;
+                                    for (char c : s) {
+                                        if (c == sep) { v.push_back(cur); cur.clear(); }
+                                        else cur += c;
+                                    }
+                                    v.push_back(cur);
+                                    return v;
+                                };
+                                auto parts = segments(body, '#');
+                                if (!parts.empty()) {
+                                    // Each level is separated by '|', each field by ':'
+                                    for (auto& lvlStr : segments(parts[0], '|')) {
+                                        if (lvlStr.empty()) continue;
+                                        auto fields = segments(lvlStr, ':');
+                                        // key-value pairs
+                                        std::unordered_map<std::string, std::string> kv;
+                                        for (size_t i = 0; i + 1 < fields.size(); i += 2)
+                                            kv[fields[i]] = fields[i+1];
+                                        std::string lvlId   = kv.count("1") ? kv["1"] : "";
+                                        std::string lvlName = kv.count("2") ? kv["2"] : "";
+                                        // difficulty: key 9 = rating (stars), key 17 = demon, key 25 = auto
+                                        std::string diffStr;
+                                        if (!lvlId.empty()) {
+                                            bool isAuto  = kv.count("25") && kv["25"] == "1";
+                                            bool isDemon = kv.count("17") && kv["17"] == "1";
+                                            int  demonDiff = kv.count("43") ? std::stoi(kv["43"]) : 0;
+                                            int  rating  = kv.count("9")  ? std::stoi(kv["9"])  : 0;
+                                            if (isAuto)       diffStr = "auto";
+                                            else if (isDemon) {
+                                                switch (demonDiff) {
+                                                    case 3:  diffStr = "easy_demon"; break;
+                                                    case 4:  diffStr = "medium_demon"; break;
+                                                    case 5:  diffStr = "insane_demon"; break;
+                                                    case 6:  diffStr = "extreme_demon"; break;
+                                                    default: diffStr = "hard_demon"; break;
+                                                }
+                                            }
+                                            else {
+                                                switch (rating) {
+                                                    case 1:  diffStr = "easy"; break;
+                                                    case 2:  diffStr = "normal"; break;
+                                                    case 3:  diffStr = "hard"; break;
+                                                    case 4:  diffStr = "harder"; break;
+                                                    case 5:  diffStr = "insane"; break;
+                                                    default: diffStr = "na"; break;
+                                                }
+                                            }
+                                            // apply to matching entry
+                                            for (auto& e : entries) {
+                                                if (e.levelId == lvlId) {
+                                                    if (e.levelName.empty() && !lvlName.empty())
+                                                        e.levelName = lvlName;
+                                                    if (e.gdDifficulty.empty() && !diffStr.empty())
+                                                        e.gdDifficulty = diffStr;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            popup->populate(std::move(entries));
+                            popup->release();
+                        }
+                    );
             );
         }
     );
