@@ -1,6 +1,6 @@
 # Changelog
 
-## v2.5.3
+## v2.6.0
 - added an option to copy youtube link to clipboard instead of opening with browser (cuz im a Wine user lol)
 - Difficulty Faces!
 
