@@ -286,30 +286,46 @@ protected:
 
             // top line: level name (or ID fallback) with difficulty color
             std::string topText;
-            ccColor3B topColor;
+            ccColor3B topColor = {255, 255, 255}; // Always white now
             if (e.levelId.empty()) {
                 topText = "YouTube request";
                 topColor = {255, 70, 70};
             } else if (!e.levelName.empty()) {
                 topText = e.levelName;
-                // color by difficulty
-                if (e.gdDifficulty == "easy") topColor = {80, 210, 80};
-                else if (e.gdDifficulty == "normal") topColor = {80, 180, 255};
-                else if (e.gdDifficulty == "hard") topColor = {255, 160, 50};
-                else if (e.gdDifficulty == "harder") topColor = {255, 100, 100};
-                else if (e.gdDifficulty == "insane") topColor = {255, 60, 180};
-                else if (e.gdDifficulty.find("demon") != std::string::npos) topColor = {255, 40, 40};
-                else if (e.gdDifficulty == "auto") topColor = {200, 200, 100};
-                else topColor = {240, 200, 80};
             } else {
                 topText = "ID: " + e.levelId;
-                topColor = {240, 200, 80};
             }
             auto topLbl = CCLabelBMFont::create(topText.c_str(), "bigFont.fnt", 200.f);
             topLbl->setScale(0.40f);
             topLbl->setColor(topColor);
             topLbl->setAnchorPoint({0.f, 0.5f});
             topLbl->setPosition({28.f, inner / 2.f + 8.f});
+
+            // Add difficulty face if it's a level
+            if (!e.levelId.empty()) {
+                std::string frame = "difficulty_00_btn_001.png"; // NA
+                if (e.gdDifficulty == "auto") frame = "difficulty_auto_btn_001.png";
+                else if (e.gdDifficulty == "easy") frame = "difficulty_01_btn_001.png";
+                else if (e.gdDifficulty == "normal") frame = "difficulty_02_btn_001.png";
+                else if (e.gdDifficulty == "hard") frame = "difficulty_03_btn_001.png";
+                else if (e.gdDifficulty == "harder") frame = "difficulty_04_btn_001.png";
+                else if (e.gdDifficulty == "insane") frame = "difficulty_05_btn_001.png";
+                else if (e.gdDifficulty == "easy_demon") frame = "difficulty_07_btn_001.png";
+                else if (e.gdDifficulty == "medium_demon") frame = "difficulty_08_btn_001.png";
+                else if (e.gdDifficulty == "hard_demon") frame = "difficulty_06_btn_001.png";
+                else if (e.gdDifficulty == "insane_demon") frame = "difficulty_09_btn_001.png";
+                else if (e.gdDifficulty == "extreme_demon") frame = "difficulty_10_btn_001.png";
+
+                auto diffSpr = CCSprite::createWithSpriteFrameName(frame.c_str());
+                if (diffSpr) {
+                    diffSpr->setScale(0.45f);
+                    diffSpr->setAnchorPoint({0.f, 0.5f});
+                    // Position it after the label
+                    float labelWidth = topLbl->getContentSize().width * topLbl->getScale();
+                    diffSpr->setPosition({28.f + labelWidth + 5.f, inner / 2.f + 8.f});
+                    rowNode->addChild(diffSpr);
+                }
+            }
 
             // bottom line: requester name + source tag + difficulty
             std::string bottomText = e.name + sourceTag(e.source);
@@ -405,11 +421,10 @@ protected:
                 menu->addChild(banBtn);
 
                 if (hasYT) {
-                    auto ytLbl = CCLabelBMFont::create("YT", "bigFont.fnt", ytW * 3.f);
-                    ytLbl->setScale(0.30f);
-                    ytLbl->setColor({255, 70, 70});
+                    auto ytSpr = CCSprite::createWithSpriteFrameName("gj_ytIcon_001.png");
+                    ytSpr->setScale(0.6f);
                     auto ytBtn = CCMenuItemSpriteExtra::create(
-                        ytLbl, this, menu_selector(QueuePopup::onWatch));
+                        ytSpr, this, menu_selector(QueuePopup::onWatch));
                     ytBtn->setTag(idx);
                     ytBtn->setPosition({actX + stackW + btnGap + ytW * 0.5f, rowCY});
                     menu->addChild(ytBtn);
@@ -616,7 +631,7 @@ protected:
         );
     }
 
-    // open a youtube link in browser
+    // open a youtube link in browser or copy to clipboard
     void onWatch(CCObject* sender) {
         int idx = static_cast<CCNode*>(sender)->getTag();
         if (idx < 0 || idx >= (int)m_entries.size()) return;
@@ -624,7 +639,14 @@ protected:
         if (e.youtubeUrl.empty()) return;
         std::string url = e.youtubeUrl;
         if (url.rfind("http", 0) != 0) url = "https://" + url;
-        CCApplication::sharedApplication()->openURL(url.c_str());
+
+        auto action = Mod::get()->getSettingValue<std::string>("youtube-action");
+        if (action == "Copy to Clipboard") {
+            geode::utils::clipboard::write(url);
+            Notification::create("Copied to clipboard", NotificationIcon::Success)->show();
+        } else {
+            CCApplication::sharedApplication()->openURL(url.c_str());
+        }
     }
 
     ~QueuePopup() {

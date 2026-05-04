@@ -34,9 +34,19 @@
         },
         "open-youtube": {
             "type": "bool",
-            "name": "Open YouTube Showcases",
-            "description": "Show a YT button on requests that include a showcase video. Clicking it opens the video in your browser.",
+            "name": "Show YouTube Showcases",
+            "description": "Show a YT button on requests that include a showcase video.",
             "default": true
+        },
+        "youtube-action": {
+            "type": "string",
+            "name": "YouTube Button Action",
+            "description": "What should happen when you click the YouTube button?",
+            "default": "Open Browser",
+            "one-of": [
+                "Open Browser",
+                "Copy to Clipboard"
+            ]
         },
         "show-toast": {
             "type": "bool",
