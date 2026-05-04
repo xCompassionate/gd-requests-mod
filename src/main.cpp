@@ -301,6 +301,31 @@ protected:
             topLbl->setAnchorPoint({0.f, 0.5f});
             topLbl->setPosition({28.f, inner / 2.f + 8.f});
 
+            // bottom line: requester name + source tag + difficulty
+            std::string bottomText = e.name + sourceTag(e.source);
+            if (!e.levelId.empty() && !e.gdDifficulty.empty() && e.gdDifficulty != "na") {
+                std::string diff = e.gdDifficulty;
+                for (auto& ch : diff) if (ch == '_') ch = ' ';
+                bool cap = true;
+                for (auto& ch : diff) {
+                    if (cap && ch >= 'a' && ch <= 'z') ch -= 32;
+                    cap = (ch == ' ');
+                }
+                bottomText += " | " + diff;
+            }
+            auto bottomLbl = CCLabelBMFont::create(bottomText.c_str(), "bigFont.fnt", 200.f);
+            bottomLbl->setScale(0.30f);
+            bottomLbl->setColor(sourceColor(e.source));
+            bottomLbl->setAnchorPoint({0.f, 0.5f});
+            bottomLbl->setPosition({28.f, inner / 2.f - 9.f});
+
+            // clickable row area
+            auto rowNode = CCNode::create();
+            rowNode->setContentSize({mainW, inner});
+            rowNode->addChild(numLbl);
+            rowNode->addChild(topLbl);
+            rowNode->addChild(bottomLbl);
+
             // Add difficulty face if it's a level
             if (!e.levelId.empty()) {
                 std::string frame = "difficulty_00_btn_001.png"; // NA
@@ -326,31 +351,6 @@ protected:
                     rowNode->addChild(diffSpr);
                 }
             }
-
-            // bottom line: requester name + source tag + difficulty
-            std::string bottomText = e.name + sourceTag(e.source);
-            if (!e.levelId.empty() && !e.gdDifficulty.empty() && e.gdDifficulty != "na") {
-                std::string diff = e.gdDifficulty;
-                for (auto& ch : diff) if (ch == '_') ch = ' ';
-                bool cap = true;
-                for (auto& ch : diff) {
-                    if (cap && ch >= 'a' && ch <= 'z') ch -= 32;
-                    cap = (ch == ' ');
-                }
-                bottomText += " | " + diff;
-            }
-            auto bottomLbl = CCLabelBMFont::create(bottomText.c_str(), "bigFont.fnt", 200.f);
-            bottomLbl->setScale(0.30f);
-            bottomLbl->setColor(sourceColor(e.source));
-            bottomLbl->setAnchorPoint({0.f, 0.5f});
-            bottomLbl->setPosition({28.f, inner / 2.f - 9.f});
-
-            // clickable row area
-            auto rowNode = CCNode::create();
-            rowNode->setContentSize({mainW, inner});
-            rowNode->addChild(numLbl);
-            rowNode->addChild(topLbl);
-            rowNode->addChild(bottomLbl);
 
             auto mainBtn = CCMenuItemSpriteExtra::create(
                 rowNode, this, menu_selector(QueuePopup::onEntry)
