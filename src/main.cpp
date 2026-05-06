@@ -445,7 +445,6 @@ protected:
                 }
                 auto level = GJGameLevel::create();
                 level->m_levelID = std::stoi(levelId);
-                level->m_online = true;
                 auto infoScene = LevelInfoLayer::scene(level, false);
                 CCDirector::get()->pushScene(CCTransitionFade::create(0.5f, infoScene));
             }
