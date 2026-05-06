@@ -437,7 +437,7 @@ protected:
             [levelId = e.levelId]() -> web::WebFuture {
                 return web::WebRequest().get(fmt::format("https://www.boomlings.com/database/getGJLevels21.php?type=0&str={}&secret=Wm9tYmllR3V5OQ==", levelId));
             },
-            [spinnerRoot, levelId = e.levelId](web::WebResponse res) {
+            [spinnerRoot, levelId = e.levelId, levelName = e.levelName](web::WebResponse res) {
                 spinnerRoot->removeFromParent();
                 if (!res.ok()) {
                     Notification::create("Level Not Found", NotificationIcon::Error)->show();
@@ -445,6 +445,10 @@ protected:
                 }
                 auto level = GJGameLevel::create();
                 level->m_levelID = std::stoi(levelId);
+                level->m_levelName = levelName;
+                level->m_coopLevel = false;
+                auto glm = GameLevelManager::sharedState();
+                glm->downloadLevel(level->m_levelID, false);
                 auto infoScene = LevelInfoLayer::scene(level, false);
                 CCDirector::get()->pushScene(CCTransitionFade::create(0.5f, infoScene));
             }
