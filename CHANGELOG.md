@@ -5,6 +5,7 @@
 - now shows setup button
 - fixed difficulty face position
 - queue count indicator
+- enter level directly! (wont instantly show creator name cuz bugged LOL)
 - and more
 
 ## v2.6.0
