@@ -485,7 +485,7 @@ protected:
     }
 
     void onRemoveAll(CCObject*) {
-        geode::createQuickPopup("Remove All", "Are you sure you want to <cr>remove all</c> pending requests?", "Cancel", "Remove All", [this](auto, bool btn2) {
+        geode::createQuickPopup("Remove All", "Are you sure you want to <cr>remove all</c> pending requests?", "Cancel", "Remove All", [this](FLAlertLayer*, bool btn2) {
             if (!btn2) return;
             sendQueueRemoveAll();
             g_queueLevelIds.clear();
@@ -547,7 +547,7 @@ void checkForUpdates() {
             if (latestVer.empty()) return;
             if (latestVer[0] == 'v') latestVer = latestVer.substr(1);
             
-            auto currentVer = Mod::get()->getVersion().toString();
+            auto currentVer = Mod::get()->getVersion().toVString();
             if (currentVer[0] == 'v') currentVer = currentVer.substr(1);
 
             if (latestVer != currentVer) {
@@ -564,7 +564,7 @@ void checkForUpdates() {
                             },
                             [](web::WebResponse dlRes) {
                                 if (dlRes.ok()) {
-                                    auto path = Mod::get()->getModPath();
+                                    auto path = Mod::get()->getPackagePath();
                                     auto data = dlRes.data();
                                     std::ofstream file(path.string(), std::ios::binary);
                                     file.write(reinterpret_cast<const char*>(data.data()), data.size());
@@ -634,7 +634,7 @@ void fetchAndShowQueue() {
     auto token = Mod::get()->getSettingValue<std::string>("creator-token");
     if (token.empty()) {
         g_fetchInProgress = false;
-        geode::createQuickPopup("GD Requests", "No token set! Would you like to set one up?", "No", "Setup", [](auto, bool btn2) {
+        geode::createQuickPopup("GD Requests", "No token set! Would you like to set one up?", "No", "Setup", [](FLAlertLayer*, bool btn2) {
             if (btn2) CCApplication::sharedApplication()->openURL("https://www.gdrequests.org/geode");
         });
         return;
