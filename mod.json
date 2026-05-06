@@ -99,6 +99,11 @@
             "control": {
                 "slider": true
             }
+        },
+        "reinstall-latest": {
+            "type": "custom:reinstall-button",
+            "name": "Reinstall Latest Release",
+            "description": "Download and reinstall the latest version of GD Requests directly from GitHub."
         }
     }
 }

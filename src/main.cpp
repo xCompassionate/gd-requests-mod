@@ -38,7 +38,6 @@ struct QueueEntry {
 
 // Forward Declarations
 void fetchAndShowQueue();
-void checkForUpdates();
 
 // API Helpers
 
@@ -530,54 +529,101 @@ public:
     }
 };
 
-// Update Logic
+// Custom Reinstall Setting
 
-void checkForUpdates() {
-    geode::async::spawn(
-        []() -> web::WebFuture {
-            return web::WebRequest().get("https://api.github.com/repos/xCompassionate/gd-requests-mod/releases/latest");
-        },
-        [](web::WebResponse res) {
-            if (!res.ok()) return;
-            auto json = res.json();
-            if (!json) return;
-            std::string latestVer = (*json)["tag_name"].asString().unwrapOr("");
-            if (latestVer.empty()) return;
-            if (latestVer[0] == 'v') latestVer = latestVer.substr(1);
-            
-            auto currentVer = Mod::get()->getVersion().toVString();
-            if (currentVer[0] == 'v') currentVer = currentVer.substr(1);
+class ReinstallSettingV3 : public SettingV3 {
+public:
+    static Result<std::shared_ptr<SettingV3>> parse(std::string const& key, std::string const& modID, matjson::Value const& json) {
+        auto res = std::make_shared<ReinstallSettingV3>();
+        auto root = checkJson(json, "ReinstallSettingV3");
+        res->init(key, modID, root);
+        res->parseNameAndDescription(root);
+        res->parseEnableIf(root);
+        root.checkUnknownKeys();
+        return root.ok(std::static_pointer_cast<SettingV3>(res));
+    }
 
-            log::info("Latest: {}, Current: {}", latestVer, currentVer);
-            if (latestVer != currentVer) {
-                geode::createQuickPopup(
-                    "Update Available",
-                    fmt::format("A new version ({}) is available! Would you like to update?", latestVer),
-                    "No", "Update",
-                    [](auto, bool btn2) {
-                        if (!btn2) return;
-                        Notification::create("installing update", NotificationIcon::Info)->show();
-                        geode::async::spawn(
-                            []() -> web::WebFuture {
-                                return web::WebRequest().get(UPDATE_URL);
-                            },
-                            [](web::WebResponse dlRes) {
-                                if (dlRes.ok()) {
-                                    auto path = Mod::get()->getPackagePath();
-                                    auto data = dlRes.data();
-                                    std::ofstream file(path.string(), std::ios::binary);
-                                    file.write(reinterpret_cast<const char*>(data.data()), data.size());
-                                    file.close();
-                                    Notification::create("Update installed! restart to apply!", NotificationIcon::Success)->show();
-                                } else {
-                                    Notification::create("Update failed!", NotificationIcon::Error)->show();
-                                }
-                            }
-                        );
-                    }
-                );
+    bool load(matjson::Value const& json) override { return true; }
+    bool save(matjson::Value& json) const override { return true; }
+    bool isDefaultValue() const override { return true; }
+    void reset() override {}
+    SettingNodeV3* createNode(float width) override;
+};
+
+class ReinstallSettingNodeV3 : public SettingNodeV3 {
+protected:
+    ButtonSprite* m_buttonSprite;
+    CCMenuItemSpriteExtra* m_button;
+
+    bool init(std::shared_ptr<ReinstallSettingV3> setting, float width) {
+        if (!SettingNodeV3::init(setting, width)) return false;
+
+        m_buttonSprite = ButtonSprite::create("Reinstall", "goldFont.fnt", "GJ_button_01.png", .8f);
+        m_buttonSprite->setScale(.5f);
+        m_button = CCMenuItemSpriteExtra::create(
+            m_buttonSprite, this, menu_selector(ReinstallSettingNodeV3::onReinstall)
+        );
+        this->getButtonMenu()->addChildAtPosition(m_button, Anchor::Center);
+        this->getButtonMenu()->setContentWidth(60);
+        this->getButtonMenu()->updateLayout();
+
+        this->updateState(nullptr);
+        return true;
+    }
+
+    void updateState(CCNode* invoker) override {
+        SettingNodeV3::updateState(invoker);
+        auto shouldEnable = this->getSetting()->shouldEnable();
+        m_button->setEnabled(shouldEnable);
+        m_buttonSprite->setCascadeColorEnabled(true);
+        m_buttonSprite->setCascadeOpacityEnabled(true);
+        m_buttonSprite->setOpacity(shouldEnable ? 255 : 155);
+        m_buttonSprite->setColor(shouldEnable ? ccWHITE : ccGRAY);
+    }
+
+    void onReinstall(CCObject*) {
+        Notification::create("Downloading latest release...", NotificationIcon::Info)->show();
+        geode::async::spawn(
+            []() -> web::WebFuture {
+                return web::WebRequest().get(UPDATE_URL);
+            },
+            [](web::WebResponse dlRes) {
+                if (dlRes.ok()) {
+                    auto path = Mod::get()->getPackagePath();
+                    auto data = dlRes.data();
+                    std::ofstream file(path.string(), std::ios::binary);
+                    file.write(reinterpret_cast<const char*>(data.data()), data.size());
+                    file.close();
+                    Notification::create("Reinstalled! Restart to apply!", NotificationIcon::Success)->show();
+                } else {
+                    Notification::create("Reinstall failed!", NotificationIcon::Error)->show();
+                }
             }
+        );
+    }
+
+    void onCommit() override {}
+    void onResetToDefault() override {}
+
+public:
+    static ReinstallSettingNodeV3* create(std::shared_ptr<ReinstallSettingV3> setting, float width) {
+        auto ret = new ReinstallSettingNodeV3();
+        if (ret->init(setting, width)) {
+            ret->autorelease();
+            return ret;
         }
+        delete ret;
+        return nullptr;
+    }
+
+    bool hasUncommittedChanges() const override { return false; }
+    bool hasNonDefaultValue() const override { return false; }
+};
+
+SettingNodeV3* ReinstallSettingV3::createNode(float width) {
+    return ReinstallSettingNodeV3::create(
+        std::static_pointer_cast<ReinstallSettingV3>(shared_from_this()),
+        width
     );
 }
 
@@ -700,9 +746,6 @@ struct $modify(GDReqMenuLayer, MenuLayer) {
         rightMenu->addChild(btn);
         rightMenu->updateLayout();
 
-        static bool updateChecked = false;
-        if (!updateChecked) { checkForUpdates(); updateChecked = true; }
-
         this->schedule(schedule_selector(GDReqMenuLayer::updateBadge), 5.f);
         return true;
     }
@@ -754,6 +797,7 @@ struct $modify(GDReqPauseLayer, PauseLayer) {
 };
 
 $on_mod(Loaded) {
+    (void)Mod::get()->registerCustomSettingType("reinstall-button", &ReinstallSettingV3::parse);
     listenForKeybindSettingPresses("open-queue-keybind", [](Keybind const&, bool down, bool repeat, double) {
         if (down && !repeat) fetchAndShowQueue();
     });
