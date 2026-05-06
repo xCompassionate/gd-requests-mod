@@ -446,9 +446,8 @@ protected:
                 auto level = GJGameLevel::create();
                 level->m_levelID = std::stoi(levelId);
                 level->m_levelName = levelName;
-                level->m_coopLevel = false;
                 auto glm = GameLevelManager::sharedState();
-                glm->downloadLevel(level->m_levelID, false);
+                glm->downloadLevel(level->m_levelID, false, 0);
                 auto infoScene = LevelInfoLayer::scene(level, false);
                 CCDirector::get()->pushScene(CCTransitionFade::create(0.5f, infoScene));
             }
