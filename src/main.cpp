@@ -315,9 +315,10 @@ protected:
                 auto diffSpr = CCSprite::createWithSpriteFrameName(frame.c_str());
                 if (diffSpr) {
                     diffSpr->setScale(0.45f);
-                    diffSpr->setAnchorPoint({0.f, 0.5f});
-                    diffSpr->setPosition({14.f, inner / 2.f + 8.f}); // Behind number queue
-                    numLbl->setZOrder(1); // Ensure number is on top
+                    diffSpr->setAnchorPoint({0.5f, 0.5f});
+                    diffSpr->setPosition({14.f + (numLbl->getContentSize().width * 0.38f / 2.f), inner / 2.f}); // Behind number queue
+                    diffSpr->setZOrder(0);
+                    numLbl->setZOrder(1);
                     rowNode->addChild(diffSpr);
                 }
             }
@@ -423,9 +424,7 @@ protected:
         if (idx < 0 || idx >= (int)m_entries.size()) return;
         auto& e = m_entries[idx];
         if (e.levelId.empty()) return;
-
         onClose(nullptr);
-
         auto spinnerRoot = CCLayer::create();
         spinnerRoot->setTag(LOADING_CIRCLE_TAG);
         auto scene = CCDirector::get()->getRunningScene();
@@ -434,7 +433,6 @@ protected:
         auto circle = LoadingCircle::create();
         circle->setParentLayer(spinnerRoot);
         circle->show();
-
         geode::async::spawn(
             [levelId = e.levelId]() -> web::WebFuture {
                 return web::WebRequest().get(fmt::format("https://www.boomlings.com/database/getGJLevels21.php?type=0&str={}&secret=Wm9tYmllR3V5OQ==", levelId));
@@ -442,15 +440,14 @@ protected:
             [spinnerRoot, levelId = e.levelId](web::WebResponse res) {
                 spinnerRoot->removeFromParent();
                 if (!res.ok()) {
-                    Notification::create("Level Not Found Apparently", NotificationIcon::Error)->show();
+                    Notification::create("Level Not Found", NotificationIcon::Error)->show();
                     return;
                 }
-                // For simplicity, we just trigger a search again but directly to the level if possible
-                // Better way: parse response and create GJGameLevel, but searching is safer with Geode's bindings
-                auto searchObj = GJSearchObject::create(SearchType::Search, levelId);
-                auto director = CCDirector::get();
-                director->popToRootScene();
-                director->pushScene(CCTransitionFade::create(0.5f, LevelBrowserLayer::scene(searchObj)));
+                auto level = GJGameLevel::create();
+                level->m_levelID = std::stoi(levelId);
+                level->m_online = true;
+                auto infoScene = LevelInfoLayer::scene(level, false);
+                CCDirector::get()->pushScene(CCTransitionFade::create(0.5f, infoScene));
             }
         );
     }
