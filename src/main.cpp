@@ -548,6 +548,7 @@ void checkForUpdates() {
             auto currentVer = Mod::get()->getVersion().toVString();
             if (currentVer[0] == 'v') currentVer = currentVer.substr(1);
 
+            log::info("Latest: {}, Current: {}", latestVer, currentVer);
             if (latestVer != currentVer) {
                 geode::createQuickPopup(
                     "Update Available",
