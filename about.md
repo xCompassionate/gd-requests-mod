@@ -27,7 +27,6 @@ Browse and manage your level request queue without ever leaving Geometry Dash.
 
 - Website: [gdrequests.org](https://www.gdrequests.org)
 - Source: [github.com/xCompassionate/gd-requests-mod](https://github.com/xCompassionate/gd-requests-mod)
-- Download: [malikhw47.gd_requests_mod.geode](https://malikhw.github.io/gd-requests-mod/malikhw47.gd_requests_mod.geode)
 - Made by [iContradict](https://twitch.tv/iContradict)
 
 (AND NOW OWNED BY [MalikHw47](https://youtube.com/@MalikHw47) MUHAHAHAHAHA)
