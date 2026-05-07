@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.7.1
+- reverted enter level directly from v2.7.0
+
 ## v2.7.0
 - Auto update check
 - now shows setup button
