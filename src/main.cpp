@@ -8,6 +8,7 @@
 #include <Geode/modify/LevelInfoLayer.hpp>
 #include <Geode/ui/BasedButtonSprite.hpp>
 #include <Geode/loader/SettingV3.hpp>
+#include <Geode/modify/LevelBrowserLayer.hpp>
 #include <unordered_set>
 #include <cmath>
 #include <algorithm>
@@ -23,6 +24,7 @@ static std::unordered_map<std::string, std::string> g_queueLevelNames; // levelI
 static bool g_fetchInProgress = false;
 static std::string g_currentQueueLevelId; // tracks which queued level is being played
 static size_t g_lastQueueCount = 0;
+static bool g_autoOpenFirstLevel = false;
 
 static bool g_blackScreenActive = false;
 
@@ -423,33 +425,13 @@ protected:
         if (idx < 0 || idx >= (int)m_entries.size()) return;
         auto& e = m_entries[idx];
         if (e.levelId.empty()) return;
+
         onClose(nullptr);
-        auto spinnerRoot = CCLayer::create();
-        spinnerRoot->setTag(LOADING_CIRCLE_TAG);
-        auto scene = CCDirector::get()->getRunningScene();
-        spinnerRoot->setPosition(scene->getContentSize() / 2);
-        scene->addChild(spinnerRoot, 1000);
-        auto circle = LoadingCircle::create();
-        circle->setParentLayer(spinnerRoot);
-        circle->show();
-        geode::async::spawn(
-            [levelId = e.levelId]() -> web::WebFuture {
-                return web::WebRequest().get(fmt::format("https://www.boomlings.com/database/getGJLevels21.php?type=0&str={}&secret=Wm9tYmllR3V5OQ==", levelId));
-            },
-            [spinnerRoot, levelId = e.levelId, levelName = e.levelName](web::WebResponse res) {
-                spinnerRoot->removeFromParent();
-                if (!res.ok()) {
-                    Notification::create("Level Not Found", NotificationIcon::Error)->show();
-                    return;
-                }
-                auto level = GJGameLevel::create();
-                level->m_levelID = std::stoi(levelId);
-                level->m_levelName = levelName;
-                level->m_levelNotDownloaded = true;
-                auto infoScene = LevelInfoLayer::scene(level, false);
-                CCDirector::get()->pushScene(CCTransitionFade::create(0.5f, infoScene));
-            }
-        );
+
+        auto searchObj = GJSearchObject::create(SearchType::Search, e.levelId);
+        g_autoOpenFirstLevel = true;
+        auto scene = LevelBrowserLayer::scene(searchObj);
+        CCDirector::get()->pushScene(CCTransitionFade::create(0.5f, scene));
     }
 
     void onRemove(CCObject* sender) {
@@ -526,6 +508,34 @@ public:
         if (auto spinnerRoot = m_mainLayer->getChildByTag(LOADING_CIRCLE_TAG)) spinnerRoot->removeFromParent();
         if (m_entries.empty()) buildEmpty();
         else buildPage();
+    }
+};
+
+struct $modify(GDReqLevelBrowser, LevelBrowserLayer) {
+    void loadPage(GJSearchObject* obj) {
+        LevelBrowserLayer::loadPage(obj);
+
+        if (!g_autoOpenFirstLevel) return;
+        g_autoOpenFirstLevel = false;
+
+        // Schedule a single frame delay so the cells are built
+        this->scheduleOnce(schedule_selector(GDReqLevelBrowser::autoOpenFirstLevel), 0.1f);
+    }
+
+    void autoOpenFirstLevel(float) {
+        // The first LevelCell child will have our level
+        CCArray* children = this->getChildren();
+        if (!children) return;
+        for (int i = 0; i < (int)children->count(); i++) {
+            auto cell = dynamic_cast<LevelCell*>(children->objectAtIndex(i));
+            if (!cell) continue;
+            auto level = cell->m_level;
+            if (!level) continue;
+            // Push directly to LevelInfoLayer for the found level
+            auto infoScene = LevelInfoLayer::scene(level, false);
+            CCDirector::get()->pushScene(CCTransitionFade::create(0.5f, infoScene));
+            return;
+        }
     }
 };
 
