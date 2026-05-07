@@ -1,5 +1,8 @@
 # Changelog
 
+## v2.7.2
+- "enter level directly" BACK! now fixed
+
 ## v2.7.1
 - reverted enter level directly from v2.7.0
 
