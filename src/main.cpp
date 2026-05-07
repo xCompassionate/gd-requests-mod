@@ -512,30 +512,22 @@ public:
 };
 
 struct $modify(GDReqLevelBrowser, LevelBrowserLayer) {
-    void loadPage(GJSearchObject* obj) {
-        LevelBrowserLayer::loadPage(obj);
+    void loadLevelsFinished(cocos2d::CCArray* levels, char const* key, int type) {
+        LevelBrowserLayer::loadLevelsFinished(levels, key, type);
 
         if (!g_autoOpenFirstLevel) return;
-        g_autoOpenFirstLevel = false;
-
-        // Schedule a single frame delay so the cells are built
-        this->scheduleOnce(schedule_selector(GDReqLevelBrowser::autoOpenFirstLevel), 0.1f);
-    }
-
-    void autoOpenFirstLevel(float) {
-        // The first LevelCell child will have our level
-        CCArray* children = this->getChildren();
-        if (!children) return;
-        for (int i = 0; i < (int)children->count(); i++) {
-            auto cell = dynamic_cast<LevelCell*>(children->objectAtIndex(i));
-            if (!cell) continue;
-            auto level = cell->m_level;
-            if (!level) continue;
-            // Push directly to LevelInfoLayer for the found level
-            auto infoScene = LevelInfoLayer::scene(level, false);
-            CCDirector::get()->pushScene(CCTransitionFade::create(0.5f, infoScene));
+        if (!levels || levels->count() == 0) {
+            g_autoOpenFirstLevel = false;
             return;
         }
+
+        g_autoOpenFirstLevel = false;
+
+        auto level = static_cast<GJGameLevel*>(levels->objectAtIndex(0));
+        if (!level) return;
+
+        auto infoScene = LevelInfoLayer::scene(level, false);
+        CCDirector::get()->pushScene(CCTransitionFade::create(0.5f, infoScene));
     }
 };
 
