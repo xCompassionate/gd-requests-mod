@@ -8,7 +8,7 @@
     },
     "id": "icontradict.gd-requests",
     "name": "GD Requests",
-    "version": "2.7.2",
+    "version": "2.8.0",
     "developers": ["iContradict", "MalikHw47"],
     "description": "Manage your viewer level request queue in-game. Browse requests, jump to levels, remove/ban/mark as played -- all without leaving GD. Pairs with gdrequests.org.",
     "resources": {
