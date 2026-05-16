@@ -11,7 +11,6 @@
 #include <Geode/loader/SettingV3.hpp>
 #include <Geode/modify/LevelBrowserLayer.hpp>
 #include <unordered_set>
-#include <cmath>
 #include <algorithm>
 #include <vector>
 
@@ -28,6 +27,8 @@ static size_t g_lastQueueCount = 0;
 static bool g_autoOpenFirstLevel = false;
 
 static bool g_blackScreenActive = false;
+static bool g_updateChecked = false; // only check once per GD launch
+static std::string g_pendingQueueLevelId; // set when a queued level is entered, persists across LevelInfoLayer re-entry
 
 struct QueueEntry {
     std::string name;
@@ -35,7 +36,7 @@ struct QueueEntry {
     std::string youtubeUrl;
     std::string levelName;
     std::string gdDifficulty;
-    std::string source; // "twitch", "youtube", or empty/unknown
+    std::string note; // optional submission note from the requester
     bool online = false;
 };
 
@@ -142,18 +143,6 @@ static constexpr int QUEUE_BADGE_TAG    = 9882;
 static constexpr int BLACK_OVERLAY_TAG  = 9883;
 static constexpr int BLACK_BTN_TAG      = 9884;
 
-static std::string sourceTag(const std::string& source) {
-    if (source == "twitch") return " [TTV]";
-    if (source == "youtube") return " [YT]";
-    return "";
-}
-
-static ccColor3B sourceColor(const std::string& source) {
-    if (source == "twitch") return {145, 70, 255};
-    if (source == "youtube") return {255, 70, 70};
-    return {180, 180, 200};
-}
-
 // Black Screen Helpers
 
 static CCPoint blackBtnPosition(CCSize ws, float btnSize) {
@@ -230,12 +219,64 @@ static void silentlyPruneNonexistentLevels(std::vector<std::string> levelIds) {
     }
 }
 
+// One-time update check against GitHub releases
+static void checkForUpdate() {
+    if (g_updateChecked) return;
+    g_updateChecked = true;
+    geode::async::spawn(
+        []() -> web::WebFuture {
+            return web::WebRequest()
+                .header("User-Agent", "gd-requests-mod")
+                .get("https://api.github.com/repos/xCompassionate/gd-requests-mod/releases/latest");
+        },
+        [](web::WebResponse res) {
+            if (!res.ok()) return;
+            auto jsonRes = res.json();
+            if (!jsonRes) return;
+            std::string tagName = (*jsonRes)["tag_name"].asString().unwrapOr("");
+            if (tagName.empty()) return;
+            // Strip leading 'v' for comparison
+            std::string tag = tagName;
+            if (!tag.empty() && tag[0] == 'v') tag = tag.substr(1);
+            std::string current = Mod::get()->getVersion().toNonVString();
+            if (tag == current) return;
+            geode::createQuickPopup(
+                "GD Requests Update",
+                fmt::format("A new version (<cy>{}</c>) is available!\nYou have <cr>{}</c>. Update now?", tagName, current),
+                "Later", "Update",
+                [](FLAlertLayer*, bool btn2) {
+                    if (!btn2) return;
+                    Notification::create("Downloading update...", NotificationIcon::Info)->show();
+                    geode::async::spawn(
+                        []() -> web::WebFuture {
+                            return web::WebRequest().get(UPDATE_URL);
+                        },
+                        [](web::WebResponse dlRes) {
+                            if (dlRes.ok()) {
+                                auto path = Mod::get()->getPackagePath();
+                                auto data = dlRes.data();
+                                std::ofstream file(path.string(), std::ios::binary);
+                                file.write(reinterpret_cast<const char*>(data.data()), data.size());
+                                file.close();
+                                Notification::create("Updated! Restart to apply!", NotificationIcon::Success)->show();
+                            } else {
+                                Notification::create("Update failed!", NotificationIcon::Error)->show();
+                            }
+                        }
+                    );
+                }
+            );
+        }
+    );
+}
+
 // Popup Classes
 
-class QueuePopup : public geode::Popup {
+class QueuePopup : public geode::Popup, public FLAlertLayerProtocol {
     std::vector<QueueEntry> m_entries;
     int m_page = 0;
     bool m_loading = false;
+    int m_pendingEntryIdx = -1;
     static constexpr int PER_PAGE = 5;
 
 protected:
@@ -365,10 +406,10 @@ protected:
             topLbl->setAnchorPoint({0.f, 0.5f});
             topLbl->setPosition({28.f, inner / 2.f + 8.f});
 
-            std::string bottomText = e.name + sourceTag(e.source);
+            std::string bottomText = e.name;
             auto bottomLbl = CCLabelBMFont::create(bottomText.c_str(), "bigFont.fnt", 200.f);
             bottomLbl->setScale(0.30f);
-            bottomLbl->setColor(sourceColor(e.source));
+            bottomLbl->setColor({200, 200, 200});
             bottomLbl->setAnchorPoint({0.f, 0.5f});
             bottomLbl->setPosition({28.f, inner / 2.f - 9.f});
 
@@ -505,8 +546,34 @@ protected:
         auto& e = m_entries[idx];
         if (e.levelId.empty()) return;
 
-        onClose(nullptr);
+        if (!e.note.empty()) {
+            std::string note = e.note;
+            std::string levelId = e.levelId;
+            FLAlertLayer::create(
+                this, "Submission Note",
+                note,
+                "OK", nullptr, 300.f
+            )->show();
+            // navigation happens in FLAlertLayerProtocol callback below
+            m_pendingEntryIdx = idx;
+            return;
+        }
 
+        navigateToEntry(idx);
+    }
+
+    void FLAlert_Clicked(FLAlertLayer*, bool) {
+        if (m_pendingEntryIdx >= 0) {
+            int idx = m_pendingEntryIdx;
+            m_pendingEntryIdx = -1;
+            navigateToEntry(idx);
+        }
+    }
+
+    void navigateToEntry(int idx) {
+        if (idx < 0 || idx >= (int)m_entries.size()) return;
+        auto& e = m_entries[idx];
+        onClose(nullptr);
         auto searchObj = GJSearchObject::create(SearchType::Search, e.levelId);
         g_autoOpenFirstLevel = true;
         auto scene = LevelBrowserLayer::scene(searchObj);
@@ -755,6 +822,7 @@ void pollQueue() {
 // Mod Hooks
 
 void fetchAndShowQueue() {
+    checkForUpdate();
     if (g_fetchInProgress) return;
     g_fetchInProgress = true;
     auto token = Mod::get()->getSettingValue<std::string>("creator-token");
@@ -794,7 +862,7 @@ void fetchAndShowQueue() {
                     qe.youtubeUrl = item["youtube_url"].asString().unwrapOr("");
                     qe.levelName = item["level_name"].asString().unwrapOr("");
                     qe.gdDifficulty = item["gd_difficulty"].asString().unwrapOr("");
-                    qe.source = item["source"].asString().unwrapOr("");
+                    qe.note = item["note"].asString().unwrapOr("");
                     if (!qe.levelId.empty() || !qe.youtubeUrl.empty()) {
                         if (!qe.levelId.empty()) {
                             g_queueLevelIds.insert(qe.levelId);
@@ -848,10 +916,19 @@ struct $modify(GDReqPlayLayer, PlayLayer) {
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
         std::string lvlId = std::to_string(level->m_levelID);
-        g_currentQueueLevelId.clear();
         g_blackScreenActive = false;
+
+        // If re-entering a level that was already marked as the active queue level, restore the ID
+        if (g_pendingQueueLevelId == lvlId) {
+            g_currentQueueLevelId = lvlId;
+        } else {
+            g_currentQueueLevelId.clear();
+            g_pendingQueueLevelId.clear();
+        }
+
         if (!g_queueLevelIds.empty() && g_queueLevelIds.count(lvlId)) {
             g_currentQueueLevelId = lvlId;
+            g_pendingQueueLevelId = lvlId;
             std::string requester = g_queueLevelNames.count(lvlId) ? g_queueLevelNames[lvlId] : "Unknown";
             g_queueLevelIds.erase(lvlId);
             g_queueLevelNames.erase(lvlId);
@@ -905,6 +982,13 @@ struct $modify(GDReqPlayLayer, PlayLayer) {
 
     void onBlackScreenBtn(CCObject*) {
         toggleBlackScreen();
+    }
+
+    void onExit() {
+        if (g_pendingQueueLevelId == std::to_string(this->m_level->m_levelID))
+            g_pendingQueueLevelId.clear();
+        g_currentQueueLevelId.clear();
+        PlayLayer::onExit();
     }
 };
 
