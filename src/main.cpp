@@ -6,6 +6,7 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/PauseLayer.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
+#include <Geode/modify/ShaderLayer.hpp>
 #include <Geode/ui/BasedButtonSprite.hpp>
 #include <Geode/loader/SettingV3.hpp>
 #include <Geode/modify/LevelBrowserLayer.hpp>
@@ -138,6 +139,8 @@ void sendQueueRemoveAll() {
 static constexpr int LOADING_CIRCLE_TAG = 9880;
 static constexpr int CONTENT_ROOT_TAG   = 9881;
 static constexpr int QUEUE_BADGE_TAG    = 9882;
+static constexpr int BLACK_OVERLAY_TAG  = 9883;
+static constexpr int BLACK_BTN_TAG      = 9884;
 
 static std::string sourceTag(const std::string& source) {
     if (source == "twitch") return " [TTV]";
@@ -151,9 +154,85 @@ static ccColor3B sourceColor(const std::string& source) {
     return {180, 180, 200};
 }
 
+// Black Screen Helpers
+
+static CCPoint blackBtnPosition(CCSize ws, float btnSize) {
+    auto pos = Mod::get()->getSettingValue<std::string>("black-btn-position");
+    float margin = btnSize / 2.f + 4.f;
+    if (pos == "Top Left")      return {margin, ws.height - margin};
+    if (pos == "Top Right")     return {ws.width - margin, ws.height - margin};
+    if (pos == "Center Left")   return {margin, ws.height / 2.f};
+    if (pos == "Center Right")  return {ws.width - margin, ws.height / 2.f};
+    if (pos == "Bottom Right")  return {ws.width - margin, margin};
+    return {margin, margin}; // Bottom Left default
+}
+
+static void applyBlackScreen(bool active) {
+    auto pl = PlayLayer::get();
+    if (!pl) return;
+
+    if (auto overlay = pl->getChildByTag(BLACK_OVERLAY_TAG)) {
+        overlay->setVisible(active);
+    }
+
+    // Hide/show ShaderLayer so its effects don't bleed through
+    auto* base = static_cast<GJBaseGameLayer*>(pl);
+    if (base->m_shaderLayer) {
+        base->m_shaderLayer->setVisible(!active);
+    }
+}
+
+static void toggleBlackScreen() {
+    g_blackScreenActive = !g_blackScreenActive;
+    applyBlackScreen(g_blackScreenActive);
+}
+
+// Silent level existence check — fires after queue is populated
+static void silentlyPruneNonexistentLevels(std::vector<std::string> levelIds) {
+    if (levelIds.empty()) return;
+    auto token = Mod::get()->getSettingValue<std::string>("creator-token");
+    if (token.empty()) return;
+
+    for (auto& lvlId : levelIds) {
+        std::string searchUrl = "https://www.boomlings.com/database/getGJLevels21.php";
+        std::string body = "str=" + lvlId + "&type=0&secret=Wmfd2893gb7";
+        geode::async::spawn(
+            [searchUrl, body]() -> web::WebFuture {
+                return web::WebRequest()
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .body(std::vector<uint8_t>(body.begin(), body.end()))
+                    .post(searchUrl);
+            },
+            [lvlId, token](web::WebResponse res) {
+                if (!res.ok()) return;
+                std::string text = res.string().unwrapOr("");
+                // GD returns "-1" when no levels found
+                if (text.empty() || text == "-1") {
+                    std::string removeUrl = SERVER + "/api/queue/remove";
+                    std::string removeBody = matjson::makeObject({
+                        {"token", token},
+                        {"level_id", lvlId}
+                    }).dump();
+                    geode::async::spawn(
+                        [removeUrl, removeBody]() -> web::WebFuture {
+                            return web::WebRequest()
+                                .header("Content-Type", "application/json")
+                                .body(std::vector<uint8_t>(removeBody.begin(), removeBody.end()))
+                                .post(removeUrl);
+                        },
+                        [](web::WebResponse) {}
+                    );
+                    g_queueLevelIds.erase(lvlId);
+                    g_queueLevelNames.erase(lvlId);
+                }
+            }
+        );
+    }
+}
+
 // Popup Classes
 
-class QueuePopup : public geode::Popup {
+class QueuePopup : public geode::Popup<> {
     std::vector<QueueEntry> m_entries;
     int m_page = 0;
     bool m_loading = false;
@@ -703,6 +782,7 @@ void fetchAndShowQueue() {
             auto jsonRes = res.json();
             if (!jsonRes) { g_fetchInProgress = false; popup->release(); popup->removeFromParentAndCleanup(true); return; }
             std::vector<QueueEntry> entries;
+            std::vector<std::string> levelIdsToCheck;
             g_queueLevelIds.clear();
             g_queueLevelNames.clear();
             auto& json = *jsonRes;
@@ -716,13 +796,18 @@ void fetchAndShowQueue() {
                     qe.gdDifficulty = item["gd_difficulty"].asString().unwrapOr("");
                     qe.source = item["source"].asString().unwrapOr("");
                     if (!qe.levelId.empty() || !qe.youtubeUrl.empty()) {
-                        if (!qe.levelId.empty()) { g_queueLevelIds.insert(qe.levelId); g_queueLevelNames[qe.levelId] = qe.name; }
+                        if (!qe.levelId.empty()) {
+                            g_queueLevelIds.insert(qe.levelId);
+                            g_queueLevelNames[qe.levelId] = qe.name;
+                            levelIdsToCheck.push_back(qe.levelId);
+                        }
                         entries.push_back(std::move(qe));
                     }
                 }
             }
             popup->populate(std::move(entries));
             popup->release();
+            silentlyPruneNonexistentLevels(std::move(levelIdsToCheck));
         }
     );
 }
@@ -756,6 +841,10 @@ struct $modify(GDReqMenuLayer, MenuLayer) {
 };
 
 struct $modify(GDReqPlayLayer, PlayLayer) {
+    struct Fields {
+        CCMenuItemSpriteExtra* m_blackBtn = nullptr;
+    };
+
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
         if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
         std::string lvlId = std::to_string(level->m_levelID);
@@ -769,7 +858,60 @@ struct $modify(GDReqPlayLayer, PlayLayer) {
             sendQueueAction("/api/queue/played", lvlId);
             if (Mod::get()->getSettingValue<bool>("show-toast")) Notification::create(fmt::format("Now playing: ID {} by {}", lvlId, requester), NotificationIcon::None, 3.f)->show();
         }
+
+        auto ws = CCDirector::get()->getWinSize();
+
+        // Black overlay — covers the entire screen above everything
+        auto overlay = CCLayerColor::create({0, 0, 0, 255});
+        overlay->setContentSize(ws);
+        overlay->setPosition({0.f, 0.f});
+        overlay->setTag(BLACK_OVERLAY_TAG);
+        overlay->setVisible(false);
+        overlay->setZOrder(9999);
+        this->addChild(overlay);
+
+        // Black screen toggle button
+        bool shouldHide = Mod::get()->getSettingValue<bool>("hide-black-btn");
+        bool alwaysShow = Mod::get()->getSettingValue<bool>("always-show-black-btn");
+#if !defined(GEODE_IS_ANDROID) && !defined(GEODE_IS_IOS)
+        bool showBtn = alwaysShow && !shouldHide;
+#else
+        bool showBtn = !shouldHide;
+#endif
+        if (showBtn) {
+            float btnSize = static_cast<float>(Mod::get()->getSettingValue<int64_t>("black-btn-size"));
+            auto blackSpr = CCSprite::create("black-toggle.png"_spr);
+            if (!blackSpr) {
+                blackSpr = CCSprite::createWithSpriteFrameName("GJ_deleteBtn_001.png");
+            }
+            blackSpr->setContentSize({btnSize, btnSize});
+            blackSpr->setScale(1.f);
+
+            auto menu = CCMenu::create();
+            menu->setPosition({0.f, 0.f});
+            menu->setZOrder(10000);
+
+            auto blackBtn = CCMenuItemSpriteExtra::create(blackSpr, this, menu_selector(GDReqPlayLayer::onBlackScreenBtn));
+            blackBtn->setTag(BLACK_BTN_TAG);
+            CCPoint btnPos = blackBtnPosition(ws, btnSize);
+            blackBtn->setPosition(btnPos);
+            menu->addChild(blackBtn);
+            this->addChild(menu);
+            m_fields->m_blackBtn = blackBtn;
+        }
+
         return true;
+    }
+
+    void onBlackScreenBtn(CCObject*) {
+        toggleBlackScreen();
+    }
+};
+
+struct $modify(GDReqShaderLayer, ShaderLayer) {
+    void visit() {
+        if (g_blackScreenActive) return;
+        ShaderLayer::visit();
     }
 };
 
@@ -802,5 +944,8 @@ $on_mod(Loaded) {
     (void)Mod::get()->registerCustomSettingType("reinstall-button", &ReinstallSettingV3::parse);
     listenForKeybindSettingPresses("open-queue-keybind", [](Keybind const&, bool down, bool repeat, double) {
         if (down && !repeat) fetchAndShowQueue();
+    });
+    listenForKeybindSettingPresses("black-screen-keybind", [](Keybind const&, bool down, bool repeat, double) {
+        if (down && !repeat && PlayLayer::get()) toggleBlackScreen();
     });
 }
