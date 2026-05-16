@@ -232,7 +232,7 @@ static void silentlyPruneNonexistentLevels(std::vector<std::string> levelIds) {
 
 // Popup Classes
 
-class QueuePopup : public geode::Popup<> {
+class QueuePopup : public geode::Popup {
     std::vector<QueueEntry> m_entries;
     int m_page = 0;
     bool m_loading = false;
