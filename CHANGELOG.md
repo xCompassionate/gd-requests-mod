@@ -1,4 +1,8 @@
-# Changelog
+## v2.8.0
+- fixed blackscreen not working (now works with shaders)
+- added a "note" popup before u play a level (PLEASE TOASTYY ADD `notes` IN YOUR API I BEG YOU)
+- ban/remove buttons moved to level info page
+- auto updater apparently
 
 ## v2.7.2
 - "enter level directly" BACK! now fixed
