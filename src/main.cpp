@@ -4,7 +4,6 @@
 #include <Geode/utils/async.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
-#include <Geode/modify/PauseLayer.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
 #include <Geode/modify/ShaderLayer.hpp>
 #include <Geode/ui/BasedButtonSprite.hpp>
@@ -22,13 +21,11 @@ static const std::string UPDATE_URL = "https://github.com/xCompassionate/gd-requ
 static std::unordered_set<std::string> g_queueLevelIds;
 static std::unordered_map<std::string, std::string> g_queueLevelNames; // levelId -> requester
 static bool g_fetchInProgress = false;
-static std::string g_currentQueueLevelId; // tracks which queued level is being played
 static size_t g_lastQueueCount = 0;
 static bool g_autoOpenFirstLevel = false;
 
 static bool g_blackScreenActive = false;
 static bool g_updateChecked = false; // only check once per GD launch
-static std::string g_pendingQueueLevelId; // set when a queued level is entered, persists across LevelInfoLayer re-entry
 
 struct QueueEntry {
     std::string name;
@@ -918,17 +915,7 @@ struct $modify(GDReqPlayLayer, PlayLayer) {
         std::string lvlId = std::to_string(level->m_levelID);
         g_blackScreenActive = false;
 
-        // If re-entering a level that was already marked as the active queue level, restore the ID
-        if (g_pendingQueueLevelId == lvlId) {
-            g_currentQueueLevelId = lvlId;
-        } else {
-            g_currentQueueLevelId.clear();
-            g_pendingQueueLevelId.clear();
-        }
-
         if (!g_queueLevelIds.empty() && g_queueLevelIds.count(lvlId)) {
-            g_currentQueueLevelId = lvlId;
-            g_pendingQueueLevelId = lvlId;
             std::string requester = g_queueLevelNames.count(lvlId) ? g_queueLevelNames[lvlId] : "Unknown";
             g_queueLevelIds.erase(lvlId);
             g_queueLevelNames.erase(lvlId);
@@ -983,13 +970,6 @@ struct $modify(GDReqPlayLayer, PlayLayer) {
     void onBlackScreenBtn(CCObject*) {
         toggleBlackScreen();
     }
-
-    void onExit() {
-        if (g_pendingQueueLevelId == std::to_string(this->m_level->m_levelID))
-            g_pendingQueueLevelId.clear();
-        g_currentQueueLevelId.clear();
-        PlayLayer::onExit();
-    }
 };
 
 struct $modify(GDReqShaderLayer, ShaderLayer) {
@@ -999,29 +979,32 @@ struct $modify(GDReqShaderLayer, ShaderLayer) {
     }
 };
 
-struct $modify(GDReqPauseLayer, PauseLayer) {
-    void customSetup() {
-        PauseLayer::customSetup();
-        if (g_currentQueueLevelId.empty()) return;
-        auto ws = CCDirector::get()->getWinSize();
-        auto removeSpr = CCLabelBMFont::create("Remove", "bigFont.fnt");
-        removeSpr->setColor({255, 140, 40}); removeSpr->setScale(0.6f);
-        auto banSpr = CCLabelBMFont::create("Ban Level", "bigFont.fnt");
-        banSpr->setColor({220, 30, 30}); banSpr->setScale(0.6f);
-        auto removeBtn = CCMenuItemSpriteExtra::create(removeSpr, this, menu_selector(GDReqPauseLayer::onRemoveFromQueue));
-        auto banBtn = CCMenuItemSpriteExtra::create(banSpr, this, menu_selector(GDReqPauseLayer::onBanFromQueue));
-        float btnY = ws.height * 0.07f;
-        float rW = removeSpr->getContentSize().width * removeSpr->getScale();
-        float bW = banSpr->getContentSize().width * banSpr->getScale();
-        float gap = 12.f; float midX = ws.width / 2.f; float totalW = rW + gap + bW; float startX = midX - totalW / 2.f;
-        auto menu = CCMenu::create(); menu->setPosition({0.f, 0.f});
-        removeBtn->setPosition({startX + rW / 2.f, btnY});
-        banBtn->setPosition({startX + rW + gap + bW / 2.f, btnY});
-        menu->addChild(removeBtn); menu->addChild(banBtn);
+struct $modify(GDReqLevelInfoLayer, LevelInfoLayer) {
+    bool init(GJGameLevel* level, bool challenge) {
+        if (!LevelInfoLayer::init(level, challenge)) return false;
+        std::string lvlId = std::to_string(level->m_levelID);
+        if (!g_queueLevelIds.count(lvlId)) return true;
+
+        auto menu = CCMenu::create();
+        menu->setPosition({0.f, 0.f});
+
+        auto removeLbl = CCLabelBMFont::create("Remove", "bigFont.fnt");
+        removeLbl->setColor({255, 140, 40}); removeLbl->setScale(0.6f);
+        auto removeBtn = CCMenuItemSpriteExtra::create(removeLbl, this, menu_selector(GDReqLevelInfoLayer::onRemoveFromQueue));
+        removeBtn->setPosition({146.5f, 263.f});
+        menu->addChild(removeBtn);
+
+        auto banLbl = CCLabelBMFont::create("Ban Level", "bigFont.fnt");
+        banLbl->setColor({220, 30, 30}); banLbl->setScale(0.6f);
+        auto banBtn = CCMenuItemSpriteExtra::create(banLbl, this, menu_selector(GDReqLevelInfoLayer::onBanFromQueue));
+        banBtn->setPosition({146.5f + removeLbl->getContentSize().width * 0.6f + 12.f, 263.f});
+        menu->addChild(banBtn);
+
         addChild(menu, 10);
+        return true;
     }
-    void onRemoveFromQueue(CCObject*) { sendQueueAction("/api/queue/remove", g_currentQueueLevelId); }
-    void onBanFromQueue(CCObject*) { sendQueueAction("/api/queue/blacklist", g_currentQueueLevelId); }
+    void onRemoveFromQueue(CCObject*) { sendQueueAction("/api/queue/remove", std::to_string(m_level->m_levelID)); }
+    void onBanFromQueue(CCObject*) { sendQueueAction("/api/queue/blacklist", std::to_string(m_level->m_levelID)); }
 };
 
 $on_mod(Loaded) {
