@@ -883,7 +883,7 @@ struct $modify(GDReqMenuLayer, MenuLayer) {
         auto rightMenu = this->getChildByID("right-side-menu");
         if (!rightMenu) return true;
         CCNode* btnContent;
-        auto logo = CCSprite::create("button.png"_spr);
+        auto logo = CCSprite::create("logo.png"_spr);
         if (logo) {
             const float targetSize = 35.f;
             logo->setScale(targetSize / logo->getContentSize().width);

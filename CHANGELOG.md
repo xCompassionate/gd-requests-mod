@@ -1,3 +1,6 @@
+## v2.8.1.1
+- asset fix
+
 ## v2.8.1
 - New Mod Logo! + button texture
 
