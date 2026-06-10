@@ -21,7 +21,7 @@
         "homepage": "https://www.gdrequests.org",
         "source": "https://github.com/xCompassionate/gd-requests-mod"
     },
-    "tags": ["interface", "online", "utility"],
+    "tags": ["online", "utility"],
     "dependencies": {
         "geode.node-ids": ">=1.15.0"
     },
