@@ -21,12 +21,11 @@ Browse and manage your level request queue without ever leaving Geometry Dash.
 1. Register at [gdrequests.org](https://www.gdrequests.org)
 2. Go to **Geode Integration** in your dashboard and copy your token
 3. Paste it into the **Creator Token** field in this mod's settings
-4. Click the GD Requests icon in the top-right corner of the main menu, or press **F2**
+4. Click the GD Requests icon in the right of the main menu, or press **F2** for *quicker access* too fancy
 
 ## Links
 
 - Website: [gdrequests.org](https://www.gdrequests.org)
 - Source: [github.com/xCompassionate/gd-requests-mod](https://github.com/xCompassionate/gd-requests-mod)
-- Made by [iContradict](https://twitch.tv/iContradict)
-
-(AND NOW OWNED BY [MalikHw47](https://youtube.com/@MalikHw47) MUHAHAHAHAHA)
+- Made by [iContradict](https://twitch.tv/iContradict) (AND NOW OWNED BY [MalikHw47](https://youtube.com/@MalikHw47) MUHAHAHAHAHA)
+- Logo by [MalikHw47](https://youtube.com/@MalikHw47)
