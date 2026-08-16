@@ -322,7 +322,7 @@ protected:
         altLbl->setScale(0.30f);
         altLbl->setColor({255, 215, 100});
         auto altBtn = CCMenuItemSpriteExtra::create(altLbl, this, menu_selector(QueuePopup::onHwGdReqs));
-        altBtn->setPosition({sz.width / 2.f, sz.height - 22.f});
+        altBtn->setPosition({185.000f, 262.000f});
         altMenu->addChild(altBtn);
         root->addChild(altMenu);
 
@@ -640,7 +640,7 @@ protected:
     void onHwGdReqs(CCObject*) {
         geode::createQuickPopup(
             "Alternative",
-            "Well MalikHw47(the co-maintainer of THIS geode mod)\nmade an alternative to this named\n<co>HwGDReqs<c>! works always with ids from youtube\n AND twitch chat, and got some more nicer features\nand improvements, if you want you can\ntry it out :3",
+            "Well MalikHw47(the co-maintainer of THIS geode mod)\nmade an alternative to this named\n<co>HwGDReqs</c>! works always with ids from youtube\n AND twitch chat, and got some more nicer features\nand improvements, if you want you can\ntry it out :3",
             "Cancel", "Check it out",
             [](FLAlertLayer*, bool btn2) {
                 if (!btn2) return;
