@@ -315,9 +315,20 @@ protected:
         auto root = CCNode::create();
         root->setTag(CONTENT_ROOT_TAG);
         root->setContentSize(sz);
+
+        auto altMenu = CCMenu::create();
+        altMenu->setPosition({0.f, 0.f});
+        auto altLbl = CCLabelBMFont::create("Want an alternative that works with Youtube chat?", "bigFont.fnt", 340.f);
+        altLbl->setScale(0.30f);
+        altLbl->setColor({255, 215, 100});
+        auto altBtn = CCMenuItemSpriteExtra::create(altLbl, this, menu_selector(QueuePopup::onHwGdReqs));
+        altBtn->setPosition({sz.width / 2.f, sz.height - 22.f});
+        altMenu->addChild(altBtn);
+        root->addChild(altMenu);
+
         auto lbl = CCLabelBMFont::create("Your queue is empty!", "bigFont.fnt", 280.f);
         lbl->setScale(0.5f);
-        lbl->setPosition(sz / 2);
+        lbl->setPosition({sz.width / 2.f, sz.height / 2.f - 10.f});
         root->addChild(lbl);
         m_mainLayer->addChild(root);
     }
@@ -337,9 +348,19 @@ protected:
         root->setContentSize(sz);
         m_mainLayer->addChild(root);
 
+        auto altMenu = CCMenu::create();
+        altMenu->setPosition({0.f, 0.f});
+        auto altLbl = CCLabelBMFont::create("Want an alternative that works with Youtube chat?", "bigFont.fnt", 340.f);
+        altLbl->setScale(0.30f);
+        altLbl->setColor({255, 215, 100});
+        auto altBtn = CCMenuItemSpriteExtra::create(altLbl, this, menu_selector(QueuePopup::onHwGdReqs));
+        altBtn->setPosition({sz.width / 2.f, sz.height - 22.f});
+        altMenu->addChild(altBtn);
+        root->addChild(altMenu);
+
         auto countLbl = CCLabelBMFont::create(fmt::format("{} pending request{}", total, total == 1 ? "" : "s").c_str(), "goldFont.fnt", 260.f);
         countLbl->setScale(0.35f);
-        countLbl->setPosition({sz.width / 2.f, sz.height - 38.f});
+        countLbl->setPosition({sz.width / 2.f, sz.height - 62.f});
         root->addChild(countLbl);
 
         auto removeAllMenu = CCMenu::create();
@@ -348,7 +369,7 @@ protected:
         removeAllLbl->setScale(0.28f);
         removeAllLbl->setColor({255, 70, 70});
         auto removeAllBtn = CCMenuItemSpriteExtra::create(removeAllLbl, this, menu_selector(QueuePopup::onRemoveAll));
-        removeAllBtn->setPosition({sz.width - 50.f, sz.height - 38.f});
+        removeAllBtn->setPosition({sz.width - 50.f, sz.height - 62.f});
         removeAllMenu->addChild(removeAllBtn);
         root->addChild(removeAllMenu);
 
@@ -357,7 +378,7 @@ protected:
         const float rowLeft  = 12.f;
         const float btnGap   = 3.f;
         const bool  ytEnabled = Mod::get()->getSettingValue<bool>("open-youtube");
-        const float topY     = sz.height - 52.f;
+        const float topY     = sz.height - 76.f;
 
         auto menu = CCMenu::create();
         menu->setPosition({0.f, 0.f});
@@ -614,6 +635,18 @@ protected:
             m_entries.clear();
             buildEmpty();
         });
+    }
+
+    void onHwGdReqs(CCObject*) {
+        geode::createQuickPopup(
+            "Alternative",
+            "Well MalikHw47(the co-maintainer of THIS geode mod)\nmade an alternative to this named\n<co>HwGDReqs<c>! works always with ids from youtube\n AND twitch chat, and got some more nicer features\nand improvements, if you want you can\ntry it out :3",
+            "Cancel", "Check it out",
+            [](FLAlertLayer*, bool btn2) {
+                if (!btn2) return;
+                CCApplication::sharedApplication()->openURL("https://hwgdreqs.github.io");
+            }
+        );
     }
 
     void onWatch(CCObject* sender) {
