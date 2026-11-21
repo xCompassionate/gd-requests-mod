@@ -2,6 +2,8 @@
 #include <Geode/ui/Popup.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/utils/async.hpp>
+#include <Geode/utils/file.hpp>
+#include <Geode/ui/Notification.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/LevelInfoLayer.hpp>
@@ -10,6 +12,8 @@
 #include <Geode/loader/SettingV3.hpp>
 #include <Geode/modify/LevelBrowserLayer.hpp>
 #include <unordered_set>
+#include <unordered_map>
+#include <string>
 #include <algorithm>
 #include <vector>
 
@@ -250,11 +254,11 @@ static void checkForUpdate() {
                         },
                         [](web::WebResponse dlRes) {
                             if (dlRes.ok()) {
-                                auto path = Mod::get()->getPackagePath();
-                                auto data = dlRes.data();
-                                std::ofstream file(path.string(), std::ios::binary);
-                                file.write(reinterpret_cast<const char*>(data.data()), data.size());
-                                file.close();
+                                auto written = geode::utils::file::writeBinary(Mod::get()->getPackagePath(), dlRes.data());
+                                if (!written) {
+                                    Notification::create("Update failed!", NotificationIcon::Error)->show();
+                                    return;
+                                }
                                 Notification::create("Updated! Restart to apply!", NotificationIcon::Success)->show();
                             } else {
                                 Notification::create("Update failed!", NotificationIcon::Error)->show();
@@ -749,16 +753,6 @@ protected:
         return true;
     }
 
-    void updateState(CCNode* invoker) override {
-        SettingNodeV3::updateState(invoker);
-        auto shouldEnable = this->getSetting()->shouldEnable();
-        m_button->setEnabled(shouldEnable);
-        m_buttonSprite->setCascadeColorEnabled(true);
-        m_buttonSprite->setCascadeOpacityEnabled(true);
-        m_buttonSprite->setOpacity(shouldEnable ? 255 : 155);
-        m_buttonSprite->setColor(shouldEnable ? ccWHITE : ccGRAY);
-    }
-
     void onReinstall(CCObject*) {
         Notification::create("Downloading latest release...", NotificationIcon::Info)->show();
         geode::async::spawn(
@@ -767,11 +761,11 @@ protected:
             },
             [](web::WebResponse dlRes) {
                 if (dlRes.ok()) {
-                    auto path = Mod::get()->getPackagePath();
-                    auto data = dlRes.data();
-                    std::ofstream file(path.string(), std::ios::binary);
-                    file.write(reinterpret_cast<const char*>(data.data()), data.size());
-                    file.close();
+                    auto written = geode::utils::file::writeBinary(Mod::get()->getPackagePath(), dlRes.data());
+                    if (!written) {
+                        Notification::create("Reinstall failed!", NotificationIcon::Error)->show();
+                        return;
+                    }
                     Notification::create("Reinstalled! Restart to apply!", NotificationIcon::Success)->show();
                 } else {
                     Notification::create("Reinstall failed!", NotificationIcon::Error)->show();
@@ -784,6 +778,16 @@ protected:
     void onResetToDefault() override {}
 
 public:
+    void updateState(CCNode* invoker) override {
+        SettingNodeV3::updateState(invoker);
+        auto shouldEnable = this->getSetting()->shouldEnable();
+        m_button->setEnabled(shouldEnable);
+        m_buttonSprite->setCascadeColorEnabled(true);
+        m_buttonSprite->setCascadeOpacityEnabled(true);
+        m_buttonSprite->setOpacity(shouldEnable ? 255 : 155);
+        m_buttonSprite->setColor(shouldEnable ? ccWHITE : ccGRAY);
+    }
+
     static ReinstallSettingNodeV3* create(std::shared_ptr<ReinstallSettingV3> setting, float width) {
         auto ret = new ReinstallSettingNodeV3();
         if (ret->init(setting, width)) {
@@ -943,8 +947,8 @@ struct $modify(GDReqPlayLayer, PlayLayer) {
         CCMenuItemSpriteExtra* m_blackBtn = nullptr;
     };
 
-    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
-        if (!PlayLayer::init(level, useReplay, dontCreateObjects)) return false;
+    bool init(GJGameLevel* level, bool dontCreateObjects) {
+        if (!PlayLayer::init(level, dontCreateObjects)) return false;
         std::string lvlId = std::to_string(level->m_levelID);
         g_blackScreenActive = false;
 
